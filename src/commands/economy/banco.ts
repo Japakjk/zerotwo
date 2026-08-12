@@ -1,0 +1,39 @@
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { EconomyService } from '../../services/economy/EconomyService.js';
+import { ZeroTwoEmbed } from '../../utils/embeds.js';
+
+export default {
+  data: new SlashCommandBuilder()
+    .setName('banco')
+    .setDescription('Gerencie seus D-Coins no banco da Zero Two.')
+    .addSubcommand(sub => 
+      sub.setName('depositar').setDescription('Deposita coins no banco.').addIntegerOption(opt => opt.setName('quantia').setDescription('Quantia para depositar').setRequired(true))
+    )
+    .addSubcommand(sub => 
+      sub.setName('sacar').setDescription('Saca coins do banco.').addIntegerOption(opt => opt.setName('quantia').setDescription('Quantia para sacar').setRequired(true))
+    ),
+  async execute(interaction: ChatInputCommandInteraction) {
+    const sub = interaction.options.getSubcommand();
+    const amount = interaction.options.getInteger('quantia')!;
+    const userId = interaction.user.id;
+    const guildId = interaction.guildId!;
+
+    if (amount <= 0) return interaction.editReply({ content: 'Você não pode usar valores negativos, Darling!' });
+
+    if (sub === 'depositar') {
+      const success = await EconomyService.deposit(userId, guildId, amount);
+      if (!success) return interaction.editReply({ content: 'Você não tem coins suficientes na carteira!' });
+      
+      return interaction.editReply({
+        embeds: [ZeroTwoEmbed.success('Depósito Realizado', `Você guardou **${amount.toLocaleString()} D-Coins** no banco. Estão seguros comigo!`)]
+      });
+    } else {
+      const success = await EconomyService.withdraw(userId, guildId, amount);
+      if (!success) return interaction.editReply({ content: 'Você não tem coins suficientes no banco!' });
+      
+      return interaction.editReply({
+        embeds: [ZeroTwoEmbed.success('Saque Realizado', `Você retirou **${amount.toLocaleString()} D-Coins** do banco.`)]
+      });
+    }
+  },
+};
