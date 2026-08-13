@@ -3,6 +3,7 @@ export const Emojis = {
   coin: '<:money:1537191167299559444>',
   bank: '<:money:1537191167299559444>',
   wallet: '<:bolsamoney:1537191168876748822>',
+  economy: '<:iconedinheiro:1537191165651320873>',
   
   // Níveis e XP
   xp: '<:xprosa:1537191156264337459>',
@@ -16,6 +17,7 @@ export const Emojis = {
   mute_phrase: '<:shii:1537181081181229217>',
   warning: '<:warningsemfundo:1537181108414849034>',
   case: '<a:atencaorosa:1537181101511016448>',
+  moderation: '<:adminrosa:1537191170243952680>',
   
   // Interface e Setas
   seta: '<a:setarosagif:1537181127477825677>',
@@ -29,6 +31,11 @@ export const Emojis = {
   cat_interacao: '<:coroarosa:1537181093541842954>',
   cat_moderacao: '<:adminrosa:1537191170243952680>',
   cat_administracao: '<:workingprogress:1537181136445505616>',
+  
+  // Aliases
+  utility: '<:hehe:1537181086155669635>',
+  social: '<:coroarosa:1537181093541842954>',
+  admin: '<:workingprogress:1537181136445505616>',
 
   // Números
   n1: '<:pinkone:1537181131852742846>',
@@ -42,7 +49,7 @@ export const Emojis = {
   n9: '<:pinknine:1537181138047467600>',
   n10: '<:pinkten:1537181130145529968>',
   
-  // Outros (Mantidos ou fallbacks)
+  // Outros
   vip: '🟢',
   clock: '⏰',
   lock: '🔒',

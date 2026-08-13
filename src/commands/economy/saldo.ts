@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { EconomyService } from '../../services/economy/EconomyService.js';
 import { BalanceCardService } from '../../services/economy/BalanceCardService.js';
 
@@ -18,5 +18,18 @@ export default {
     );
 
     await interaction.editReply({ files: [attachment] });
+  },
+  async executeText(message: Message, args: string[]) {
+    const balance = await EconomyService.getBalance(message.author.id, message.guild!.id);
+    const avatarURL = message.author.displayAvatarURL({ extension: 'png', size: 256 });
+
+    const attachment = await BalanceCardService.generateCard(
+      message.author.username,
+      avatarURL,
+      balance.coins,
+      balance.bank
+    );
+
+    await message.reply({ files: [attachment] });
   },
 };

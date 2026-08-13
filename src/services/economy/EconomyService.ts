@@ -2,11 +2,24 @@ import { UserModel } from '../../database/models/User.js';
 import { TransactionModel } from '../../database/models/Transaction.js';
 
 export class EconomyService {
-  static async getVipMultiplier(userId: string, guildId: string): Promise<number> {
+  static async getVipLevel(userId: string, guildId: string): Promise<number> {
     const user = await UserModel.findOne({ userId, guildId });
-    if (!user) return 1.0;
-    // Bônus VIP: 20% por nível (VIP 5 = 100% de bônus, ou seja, 2x)
-    return 1 + (user.vipLevel * 0.20);
+    return user ? (user.vipLevel || 0) : 0;
+  }
+
+  static async setVipLevel(userId: string, guildId: string, level: number): Promise<void> {
+    await UserModel.findOneAndUpdate(
+      { userId, guildId },
+      { $set: { vipLevel: level } },
+      { upsert: true, new: true }
+    );
+  }
+
+  static async getVipMultiplier(userId: string, guildId: string): Promise<number> {
+    const level = await this.getVipLevel(userId, guildId);
+    if (level <= 0) return 1.0;
+    // Nível 1: 1.2x, Nível 5: 2.0x
+    return 1 + (level * 0.20);
   }
 
   static async getBalance(userId: string, guildId: string) {
@@ -93,7 +106,8 @@ export class EconomyService {
       return { success: false, nextAvailable: user.lastDaily.getTime() + cooldown };
     }
 
-    let reward = Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000;
+    // Recompensa Diária: 100k a 250k conforme solicitado pelo Darling
+    let reward = Math.floor(Math.random() * (250000 - 100000 + 1)) + 100000;
     const multiplier = await this.getVipMultiplier(userId, guildId);
     reward = Math.floor(reward * multiplier);
 
@@ -116,7 +130,8 @@ export class EconomyService {
       return { success: false, nextAvailable: user.lastWeekly.getTime() + cooldown };
     }
 
-    const reward = Math.floor(Math.random() * (25000 - 10000 + 1)) + 10000;
+    // Recompensa Semanal: 500k a 1M
+    const reward = Math.floor(Math.random() * (1000000 - 500000 + 1)) + 500000;
     user.coins += reward;
     user.lastWeekly = new Date();
     await user.save();
@@ -134,7 +149,8 @@ export class EconomyService {
       return { success: false, nextAvailable: user.lastMonthly.getTime() + cooldown };
     }
 
-    const reward = Math.floor(Math.random() * (100000 - 50000 + 1)) + 50000;
+    // Recompensa Mensal: 2M a 5M
+    const reward = Math.floor(Math.random() * (5000000 - 2000000 + 1)) + 2000000;
     user.coins += reward;
     user.lastMonthly = new Date();
     await user.save();

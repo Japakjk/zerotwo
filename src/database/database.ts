@@ -17,6 +17,14 @@ export async function connectDatabase(): Promise<void> {
       serverSelectionTimeoutMS: 10000,
     });
     logger.info('🌸 [DARLING-DB] Conectado com sucesso ao MongoDB Atlas! Dados salvos na nuvem.');
+
+    mongoose.connection.on('disconnected', () => {
+      logger.warn('⚠️ [DARLING-DB] Conexão perdida com o MongoDB! Tentando reconectar...');
+    });
+
+    mongoose.connection.on('error', (err) => {
+      logger.error(`❌ [DARLING-DB] Erro na conexão: ${err.message}`);
+    });
   } catch (error: any) {
     logger.error(`❌ Erro crítico ao conectar ao MongoDB Atlas: ${error.message}`);
     throw error;

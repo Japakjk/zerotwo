@@ -1,20 +1,21 @@
-import { Client, GatewayIntentBits, Collection, REST, Routes, MessageFlags } from 'discord.js';
+import { Client, GatewayIntentBits, Collection, REST, Routes, MessageFlags, TextChannel } from 'discord.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { connectDatabase } from './database/database.js';
 import { logger } from './utils/logger.js';
 import { UserModel } from './database/models/User.js';
+import { GuildModel } from './database/models/Guild.js';
 import { LevelService } from './services/leveling/LevelService.js';
 import { AchievementService } from './services/leveling/AchievementService.js';
 import { LoggingService } from './services/logging/LoggingService.js';
 import { AutoModService } from './services/automod/AutoModService.js';
 import { CooldownService } from './services/economy/CooldownService.js';
 import { MessageService } from './services/economy/MessageService.js';
+import { DashboardService } from './services/dashboard/DashboardService.js';
 import { ZeroTwoEmbed } from './utils/embeds.js';
+import { Emojis } from './utils/emojis.js';
 import ms from 'ms';
-import { TextChannel } from 'discord.js';
 
 dotenv.config();
 
@@ -66,18 +67,85 @@ async function loadCommands() {
 }
 
 // Evento Ready
-  client.once('ready', async () => {
-    logger.info(`🌸 [DARLING-BOT] Logado com sucesso como ${client.user?.tag}! A Zero Two está pronta.`);
+client.once('ready', async (readyClient) => {
+  logger.info(`🌸 [DARLING-BOT] Logado com sucesso como ${readyClient.user?.tag}! A Zero Two está pronta.`);
   
-  client.user?.setPresence({
+  readyClient.user?.setPresence({
     activities: [{ name: 'Procurando meu Darling 🦖❤️', type: 0 }],
     status: 'online',
   });
+
+  // Sincronizar guildas com o Dashboard Web
+  for (const guild of readyClient.guilds.cache.values()) {
+    try {
+      await DashboardService.syncGuild(guild);
+      logger.info(`[DashboardBridge] Guilda sincronizada: ${guild.name} (${guild.id})`);
+    } catch (err: any) {
+      logger.error(`[DashboardBridge] Falha ao sincronizar ${guild.id}:`, err.message);
+    }
+  }
 });
 
-// Evento de Mensagem para XP, AutoMod e Logs
+// Evento de Nova Guilda
+client.on('guildCreate', async (guild) => {
+  try {
+    await DashboardService.syncGuild(guild);
+    logger.info(`[DashboardBridge] Nova guilda sincronizada: ${guild.name} (${guild.id})`);
+  } catch (err: any) {
+    logger.error(`[DashboardBridge] Falha ao sincronizar nova guilda ${guild.id}:`, err.message);
+  }
+});
+
+// Evento de Mensagem para XP, AutoMod, Prefixos e Mensagens
 client.on('messageCreate', async (message) => {
   if (message.author.bot || !message.guild) return;
+
+  // Buscar prefixo do banco ou dashboard
+  let customPrefix = 'zero!';
+  try {
+    const guildDb = await GuildModel.findOne({ guildId: message.guild.id });
+    if (guildDb?.prefix) customPrefix = guildDb.prefix;
+  } catch {}
+
+  // Aceitar prefixo customizado, "zero!" ou "/" (se o bot suportar texto)
+  const prefixes = [customPrefix, 'zero!', '/'];
+  const prefix = prefixes.find(p => message.content.toLowerCase().startsWith(p.toLowerCase()));
+
+  if (prefix) {
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const commandName = args.shift()?.toLowerCase();
+
+    if (commandName) {
+      const command = client.commands.get(commandName);
+      if (command) {
+        // Se o comando tiver uma função executeText, use-a. 
+        // Caso contrário, informe que deve ser usado via Slash.
+        if (typeof command.executeText === 'function') {
+          try {
+            // Check Cooldown for Text Commands
+            const cooldown = await CooldownService.checkCooldown(message.author.id, message.guild.id, commandName);
+            if (cooldown.inCooldown) {
+              message.reply({ content: `Calma, Darling! Você está indo rápido demais. Tente novamente em **${ms(cooldown.remaining * 1000, { long: true })}**! 🦖🌸` })
+                .then(m => setTimeout(() => m.delete().catch(() => {}), 5000));
+              return;
+            }
+
+            await command.executeText(message, args);
+            // Reportar métricas
+            DashboardService.reportCommandUsage(message.guild.id, commandName, message.author.id).catch(() => {});
+            return;
+          } catch (err) {
+            logger.error(`❌ Erro no comando de texto ${commandName}:`, err);
+          }
+        } else {
+          // Fallback para comandos que ainda não tem executeText
+          message.reply({ content: `${Emojis.warning} Darling, o comando **\`/${commandName}\`** funciona apenas por barra (**\`/\`**)!` })
+            .then(m => setTimeout(() => m.delete().catch(() => {}), 5000));
+          return;
+        }
+      }
+    }
+  }
 
   // Check for AFK return
   const userData = await UserModel.findOne({ userId: message.author.id, guildId: message.guild.id });
@@ -93,7 +161,7 @@ client.on('messageCreate', async (message) => {
     message.mentions.users.forEach(async (user) => {
       const mentionedUser = await UserModel.findOne({ userId: user.id, guildId: message.guild!.id });
       if (mentionedUser?.afk?.since) {
-        message.reply({ embeds: [new ZeroTwoEmbed().setDescription(`**${user.username}** está AFK no momento.\\n**Motivo:** ${mentionedUser.afk.reason}`)] });
+        message.reply({ embeds: [new ZeroTwoEmbed().setDescription(`**${user.username}** está AFK no momento.\n**Motivo:** ${mentionedUser.afk.reason}`)] });
       }
     });
   }
@@ -109,8 +177,8 @@ client.on('messageCreate', async (message) => {
 
   if (result?.leveledUp) {
     const embed = new ZeroTwoEmbed()
-      .setTitle('✨ Level Up!')
-      .setDescription(`Parabéns, **${message.author.username}**! Você subiu para o nível **${result.newLevel}**.\n\nVocê agora é um Darling ainda mais forte! 🦖❤️`)
+      .setTitle(`${Emojis.xp} ✨ Level Up!`)
+      .setDescription(`Parabéns, **${message.author.username}**! Você subiu para o nível **${result.newLevel}**.\n\n${Emojis.seta} Você agora é um Darling ainda mais forte no Garden! 🦖❤️`)
       .setThumbnail(message.author.displayAvatarURL());
     
     message.channel.send({ content: `<@${message.author.id}>`, embeds: [embed] }).then(msg => {
@@ -129,20 +197,17 @@ client.on('interactionCreate', async interaction => {
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
 
-  // Global & Special Cooldown Check first (sync/fast)
+  // Reportar uso do comando ao Dashboard
+  DashboardService.reportCommandUsage(interaction.guildId!, interaction.commandName, interaction.user.id).catch(() => {});
+
+  // Cooldown Check
   try {
     const cooldown = await CooldownService.checkCooldown(interaction.user.id, interaction.guildId!, interaction.commandName);
     if (cooldown.inCooldown) {
-      if (!interaction.deferred && !interaction.replied) {
-        await interaction.reply({
-          content: `Calma, Darling! Você está indo rápido demais. Tente novamente em **${ms(cooldown.remaining * 1000, { long: true })}**! 🦖🌸`,
-          flags: MessageFlags.Ephemeral
-        }).catch(() => {});
-      } else {
-        await interaction.editReply({
-          content: `Calma, Darling! Você está indo rápido demais. Tente novamente em **${ms(cooldown.remaining * 1000, { long: true })}**! 🦖🌸`
-        }).catch(() => {});
-      }
+      await interaction.reply({
+        content: `Calma, Darling! Você está indo rápido demais. Tente novamente em **${ms(cooldown.remaining * 1000, { long: true })}**! 🦖🌸`,
+        flags: MessageFlags.Ephemeral
+      }).catch(() => {});
       return;
     }
   } catch (err) {
@@ -186,7 +251,9 @@ async function main() {
   }
 
   client.on('messageDelete', (message) => LoggingService.logMessageDelete(message));
+  client.on('messageUpdate', (oldMsg, newMsg) => LoggingService.logMessageUpdate(oldMsg, newMsg));
   client.on('guildMemberAdd', (member) => LoggingService.logMemberJoin(member));
+  client.on('guildMemberRemove', (member) => LoggingService.logMemberLeave(member));
 
   await client.login(process.env.DISCORD_TOKEN);
 }

@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { AchievementModel } from '../../database/models/Achievement.js';
 import { ACHIEVEMENTS } from '../../services/leveling/AchievementService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
+import { Emojis } from '../../utils/emojis.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -16,15 +17,15 @@ export default {
     const earnedIds = userAchievements.map((a: any) => a.achievementId);
 
     const embed = new ZeroTwoEmbed()
-      .setTitle('🏆 Suas Conquistas')
-      .setDescription('Aqui está o seu progresso nos desafios da Zero Two, Darling!');
+      .setTitle(`${Emojis.achievement} Suas Conquistas`)
+      .setDescription(`${Emojis.seta} Aqui está o seu progresso nos desafios da Zero Two, **Darling**!`);
 
     const list = ACHIEVEMENTS.map(ach => {
       const isEarned = earnedIds.includes(ach.id);
-      return `${isEarned ? '✅' : '🔒'} **${ach.name}**\n*${ach.description}*`;
+      return `${isEarned ? Emojis.check : Emojis.lock || '🔒'} **${ach.name}**\n*${ach.description}*`;
     }).join('\n\n');
 
-    embed.addFields({ name: 'Lista de Desafios', value: list });
+    embed.addFields({ name: `${Emojis.achievement} Lista de Desafios`, value: list });
 
     await interaction.editReply({ embeds: [embed] });
   },

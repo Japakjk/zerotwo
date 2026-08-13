@@ -76,7 +76,7 @@ export class BalanceCardService {
 
     // Nome de usuário
     ctx.fillStyle = '#2b2d31';
-    ctx.font = 'bold 28px sans-serif';
+    ctx.font = 'bold 28px "DejaVu Sans", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(username, width / 2, 215);
 
@@ -137,13 +137,13 @@ export class BalanceCardService {
 
       // Texto do Rótulo
       ctx.fillStyle = '#4f545c';
-      ctx.font = 'bold 16px sans-serif';
+      ctx.font = 'bold 16px "DejaVu Sans", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(item.label, boxX + 30, y + 33);
 
       // Texto do Valor
       ctx.fillStyle = '#2f3136';
-      ctx.font = 'bold 16px sans-serif';
+      ctx.font = 'bold 16px "DejaVu Sans", sans-serif';
       ctx.textAlign = 'right';
       ctx.fillText(`${item.value} (${item.short})`, boxX + boxWidth - 20, y + 33);
     });

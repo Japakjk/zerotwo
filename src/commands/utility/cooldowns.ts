@@ -26,20 +26,20 @@ export default {
 
     const embed = new ZeroTwoEmbed()
       .setTitle(`${Emojis.clock} Cooldown's de ${interaction.user.username}`)
-      .setDescription(`Confira os **cooldown's** abaixo:`)
+      .setDescription(`${Emojis.seta} Confira os **cooldown's** abaixo, **Darling**:`)
       .addFields(
-        { name: '⏰ Diário', value: `${results.daily}`, inline: true },
-        { name: '⏰ Semanal', value: `${results.semanal}`, inline: true },
-        { name: '⏰ Mensal', value: `${results.mensal}`, inline: true },
-        { name: '⏰ Work', value: `${results.work}`, inline: true },
-        { name: '⏰ Beijar', value: `${results.beijar}`, inline: true },
-        { name: '⏰ Abraçar', value: `${results.abracar}`, inline: true },
-        { name: '⏰ Cafuné', value: `${results.cafune}`, inline: true },
-        { name: '⏰ Socar', value: `${results.socar}`, inline: true },
-        { name: '⏰ Tapa', value: `${results.tapa}`, inline: true },
-        { name: '⏰ Rep', value: `${results.rep}`, inline: true },
+        { name: `${Emojis.clock} Diário`, value: `${results.daily}`, inline: true },
+        { name: `${Emojis.clock} Semanal`, value: `${results.semanal}`, inline: true },
+        { name: `${Emojis.clock} Mensal`, value: `${results.mensal}`, inline: true },
+        { name: `${Emojis.clock} Work`, value: `${results.work}`, inline: true },
+        { name: `${Emojis.clock} Beijar`, value: `${results.beijar}`, inline: true },
+        { name: `${Emojis.clock} Abraçar`, value: `${results.abracar}`, inline: true },
+        { name: `${Emojis.clock} Cafuné`, value: `${results.cafune}`, inline: true },
+        { name: `${Emojis.clock} Socar`, value: `${results.socar}`, inline: true },
+        { name: `${Emojis.clock} Tapa`, value: `${results.tapa}`, inline: true },
+        { name: `${Emojis.clock} Rep`, value: `${results.rep}`, inline: true },
       )
-      .setFooter({ text: `O tempo passa devagar, não é? ⏳` });
+      .setFooter({ text: `O tempo passa devagar, não é?` });
 
     await interaction.editReply({ embeds: [embed] });
   },

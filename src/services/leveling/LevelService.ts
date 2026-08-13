@@ -22,7 +22,15 @@ export class LevelService {
       user = await UserModel.create({ userId, guildId });
     }
 
-    user.xp += amount;
+    // Bônus de XP para VIPs (20% por nível VIP)
+    const vipLevel = user.vipLevel || 0;
+    const xpMultiplier = 1 + (vipLevel * 0.20);
+    const finalAmount = Math.floor(amount * xpMultiplier);
+
+    user.xp += finalAmount;
+    user.messagesTotal = (user.messagesTotal || 0) + 1;
+    user.messagesToday = (user.messagesToday || 0) + 1;
+    
     this.xpCooldowns.set(cooldownKey, now + 60000);
 
     let leveledUp = false;
@@ -31,8 +39,9 @@ export class LevelService {
       user.level += 1;
       leveledUp = true;
       
-      // Bônus de economia por subir de nível
-      await EconomyService.addCoins(userId, guildId, user.level * 100, `Level Up Reward (Level ${user.level})`);
+      // Bônus de economia por subir de nível (10k a 50k conforme o nível)
+      const levelReward = user.level * 5000;
+      await EconomyService.addCoins(userId, guildId, levelReward, `Recompensa de Level Up (Nível ${user.level})`);
     }
 
     await user.save();

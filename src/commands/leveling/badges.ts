@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { AchievementService } from '../../services/leveling/AchievementService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
+import { Emojis } from '../../utils/emojis.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -12,14 +13,14 @@ export default {
     const badges = await AchievementService.getUserBadges(target.id, interaction.guildId!);
 
     const embed = new ZeroTwoEmbed()
-      .setTitle(`🎖️ Emblemas de ${target.username}`)
+      .setTitle(`${Emojis.achievement} Emblemas de ${target.username}`)
       .setThumbnail(target.displayAvatarURL());
 
     if (badges.length === 0) {
-      embed.setDescription('Este Darling ainda não possui nenhum emblema. Que tal começar a pilotar agora?');
+      embed.setDescription(`${Emojis.seta} Este **Darling** ainda não possui nenhum emblema. Que tal começar a pilotar agora?`);
     } else {
       const badgeList = badges.map((b: any) => `${b.icon} **${b.name}**`).join('\n');
-      embed.setDescription(badgeList);
+      embed.setDescription(`${Emojis.seta} Confira as conquistas alcançadas:\n\n${badgeList}`);
     }
 
     await interaction.editReply({ embeds: [embed] });

@@ -19,17 +19,21 @@ export class ZeroTwoEmbed extends EmbedBuilder {
       .setColor('#ff3b69');
   }
 
-  static error(title: string, description: string): ZeroTwoEmbed {
+  static error(title: string, description: string, prefix: string = 'zero!'): ZeroTwoEmbed {
+    const desc = description.includes('{prefix}') 
+      ? description.replace(/{prefix}/g, prefix) 
+      : description;
+      
     return new ZeroTwoEmbed()
-      .setTitle(`${Emojis.ban || '❌'} ${title}`)
-      .setDescription(description)
-      .setColor('#e74c3c');
+      .setTitle(`${Emojis.ban} ${title}`)
+      .setDescription(desc)
+      .setColor('#ff3b69'); // Mantendo o rosa mesmo no erro para seguir a temática
   }
 
   static warning(title: string, description: string): ZeroTwoEmbed {
     return new ZeroTwoEmbed()
-      .setTitle(`${Emojis.warning || '⚠️'} ${title}`)
+      .setTitle(`${Emojis.warning} ${title}`)
       .setDescription(description)
-      .setColor('#f1c40f');
+      .setColor('#ff3b69');
   }
 }

@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { LevelService } from '../../services/leveling/LevelService.js';
 import { ProfileService } from '../../services/profile/ProfileService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
+import { Emojis } from '../../utils/emojis.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -14,15 +15,17 @@ export default {
     
     const nextLevelXP = LevelService.getXPForLevel(profile.level);
     const progress = (profile.xp / nextLevelXP) * 100;
+    const progressBar = '█'.repeat(Math.floor(progress / 10)) + '░'.repeat(10 - Math.floor(progress / 10));
 
     const embed = new ZeroTwoEmbed()
-      .setTitle(`📊 Rank de ${target.username}`)
+      .setTitle(`${Emojis.rank} Rank de ${target.username}`)
       .setThumbnail(target.displayAvatarURL())
       .addFields(
-        { name: '⭐ Nível', value: `${profile.level}`, inline: true },
-        { name: '✨ XP Atual', value: `${profile.xp.toLocaleString()} / ${nextLevelXP.toLocaleString()}`, inline: true },
-        { name: '📈 Progresso', value: `\`${progress.toFixed(1)}%\` para o próximo nível.`, inline: false }
-      );
+        { name: `${Emojis.rank} Nível`, value: `**${profile.level}**`, inline: true },
+        { name: `${Emojis.xp} XP Atual`, value: `**${profile.xp.toLocaleString()}** / ${nextLevelXP.toLocaleString()}`, inline: true },
+        { name: `${Emojis.seta} Progresso`, value: `\`${progressBar}\` **${progress.toFixed(1)}%**`, inline: false }
+      )
+      .setFooter({ text: 'Continue pilotando para subir de nível, Darling!' });
 
     await interaction.editReply({ embeds: [embed] });
   },

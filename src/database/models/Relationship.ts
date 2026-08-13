@@ -10,6 +10,7 @@ export interface IRelationship {
   type: RelationshipType;
   startedAt: Date;
   status: 'pending' | 'active';
+  affinity: number;
 }
 
 const relationshipSchema = new Schema<IRelationship>({
@@ -19,6 +20,7 @@ const relationshipSchema = new Schema<IRelationship>({
   type: { type: String, enum: ['ficando', 'namorando', 'noivos', 'casados'], default: 'namorando' },
   startedAt: { type: Date, default: Date.now },
   status: { type: String, enum: ['pending', 'active'], default: 'pending' },
+  affinity: { type: Number, default: 0 },
 });
 
 relationshipSchema.index({ guildId: 1, user1Id: 1 });

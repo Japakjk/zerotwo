@@ -23,6 +23,7 @@
   "author": "Manus AI",
   "license": "MIT",
   "dependencies": {
+    "canvas": "^2.11.2",
     "chalk": "^4.1.2",
     "discord.js": "^14.15.3",
     "dotenv": "^16.4.5",
