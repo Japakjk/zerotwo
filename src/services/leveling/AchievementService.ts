@@ -5,21 +5,23 @@ import { TextChannel } from 'discord.js';
 
 export const ACHIEVEMENTS = [
   { id: 'first_daily', name: 'Primeiro Passo', description: 'Resgatou seu primeiro daily.', icon: '🌅' },
-  { id: 'millionaire', name: 'Milionário do Garden', description: 'Acumulou 1.000.000 de D-Coins.', icon: '💎' },
+  { id: 'millionaire', name: 'Milionário do Garden', description: 'Acumulou 10.000.000 de D-Coins.', icon: '💎' },
   { id: 'level_50', name: 'Elite do Franxx', description: 'Alcançou o nível 50.', icon: '⚡' },
   { id: 'streak_7', name: 'Darling Dedicado', description: 'Manteve um streak de 7 dias.', icon: '🔥' }
 ];
 
 export class AchievementService {
-  static async checkAchievements(userId: string, guildId: string, channel?: TextChannel) {
-    const user = await UserModel.findOne({ userId, guildId });
+  static async checkAchievements(userId: string, guildId: string, channel?: TextChannel, userDoc?: any) {
+    const user = userDoc || await UserModel.findOne({ userId, guildId });
     if (!user) return;
 
     const userAchievements = await AchievementModel.find({ userId, guildId });
     const earnedIds = userAchievements.map((a: any) => a.achievementId);
 
     // Verificações
-    if (!earnedIds.includes('millionaire') && user.coins >= 1000000) {
+    // Corrigido para 10.000.000 e checando o total (carteira + banco)
+    const totalCoins = (user.coins || 0) + (user.bank || 0);
+    if (!earnedIds.includes('millionaire') && totalCoins >= 10000000) {
       await this.grantAchievement(userId, guildId, 'millionaire', channel);
     }
     
@@ -50,8 +52,12 @@ export class AchievementService {
     if (channel) {
       const embed = new ZeroTwoEmbed()
         .setTitle('🏆 Nova Conquista Desbloqueada!')
-        .setDescription(`Parabéns, Darling! Você conquistou: **${achievement.name}**\n*${achievement.description}*`)
-        .setThumbnail('https://i.imgur.com/4M1q3zs.png');
+        .setDescription(`Parabéns, Darling! Você conquistou: **${achievement.name}**\n*${achievement.description}*`);
+      
+      // Usar ícone da conquista como thumbnail se disponível, senão remove link quebrado
+      if (achievement.icon) {
+        embed.setThumbnail(null); // Remove thumbnail de imagem se preferir focar no texto e emoji
+      }
       
       channel.send({ content: `<@${userId}>`, embeds: [embed] });
     }

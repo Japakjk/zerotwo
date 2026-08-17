@@ -1,12 +1,12 @@
-import { EconomyService } from '../economy/EconomyService.js';
 import { Emojis } from '../../utils/emojis.js';
+import { EconomyService } from '../economy/EconomyService.js';
 
 export class GameService {
   private static activeGames = new Map<string, any>();
 
   // --- MINES ---
   static async startMines(userId: string, guildId: string, bet: number, minesCount: number) {
-    const success = await EconomyService.removeCoins(userId, guildId, bet);
+    const success = await EconomyService.removeCoins(userId, guildId, bet, 'Aposta no Mines', 'GAME');
     if (!success) return null;
 
     const grid = Array(25).fill('diamond');
@@ -53,7 +53,7 @@ export class GameService {
 
   // --- CRASH ---
   static async processCrash(userId: string, guildId: string, bet: number, autoCashout?: number) {
-    const success = await EconomyService.removeCoins(userId, guildId, bet);
+    const success = await EconomyService.removeCoins(userId, guildId, bet, 'Aposta no Crash', 'GAME');
     if (!success) return null;
 
     // Gera o ponto de crash (probabilidade logarítmica)
@@ -64,7 +64,7 @@ export class GameService {
 
   // --- SLOTS ---
   static async playSlots(userId: string, guildId: string, bet: number) {
-    const success = await EconomyService.removeCoins(userId, guildId, bet);
+    const success = await EconomyService.removeCoins(userId, guildId, bet, 'Aposta no Slots', 'GAME');
     if (!success) return null;
 
     const icons = ['🍒', '🍋', '🍇', '💎', '7️⃣', '🦖'];
@@ -85,7 +85,7 @@ export class GameService {
 
     const win = Math.floor(bet * multiplier);
     if (win > 0) {
-      await EconomyService.addCoins(userId, guildId, win, 'Venceu no Slots');
+      await EconomyService.addCoins(userId, guildId, win, 'Venceu no Slots', 'GAME');
     }
 
     return { result, win, multiplier };
@@ -93,7 +93,7 @@ export class GameService {
 
   // --- COINFLIP ---
   static async playCoinflip(userId: string, guildId: string, bet: number, side: 'cara' | 'coroa') {
-    const success = await EconomyService.removeCoins(userId, guildId, bet);
+    const success = await EconomyService.removeCoins(userId, guildId, bet, 'Aposta no Coinflip', 'GAME');
     if (!success) return null;
 
     const result = Math.random() < 0.5 ? 'cara' : 'coroa';
@@ -101,7 +101,7 @@ export class GameService {
     const win = won ? bet * 2 : 0;
 
     if (won) {
-      await EconomyService.addCoins(userId, guildId, win, 'Venceu no Coinflip');
+      await EconomyService.addCoins(userId, guildId, win, 'Venceu no Coinflip', 'GAME');
     }
 
     return { result, win, won };

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, Message, User } from 'discord.js';
 import { MessageService } from '../../services/economy/MessageService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { Emojis } from '../../utils/emojis.js';
@@ -13,15 +13,7 @@ export default {
     const target = interaction.options.getUser('usuario') || interaction.user;
     const stats = await MessageService.getStats(target.id, interaction.guildId!);
 
-    const embed = new ZeroTwoEmbed()
-      .setTitle(`${Emojis.cat_utilidades} Contagem de mensagens de ${target.username}`)
-      .setDescription(`• **Mensagens enviadas em ${interaction.guild?.name || 'Garden'}:**\n` +
-        `  ${Emojis.seta_menor} Hoje: **${stats.messagesToday || 0}**\n` +
-        `  ${Emojis.seta_menor} Essa Semana: **${stats.messagesWeek || 0}**\n` +
-        `  ${Emojis.seta_menor} Esse Mês: **${stats.messagesMonth || 0}**\n` +
-        `  ${Emojis.seta_menor} Total: **${stats.messagesTotal || 0}**`)
-      .setThumbnail(target.displayAvatarURL())
-      .setFooter({ text: `Utilize ${Emojis.seta_menor} /recompensas para ver as recompensas por mensagens.` });
+    const embed = this.buildEmbed(target, interaction.guild?.name || 'Garden', stats);
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -67,5 +59,24 @@ export default {
     collector.on('end', () => {
       interaction.editReply({ components: [] }).catch(() => {});
     });
+  },
+
+  async executeText(message: Message) {
+    const target = message.mentions.users.first() || message.author;
+    const stats = await MessageService.getStats(target.id, message.guild!.id);
+    const embed = this.buildEmbed(target, message.guild!.name, stats);
+    await message.reply({ embeds: [embed] });
+  },
+
+  buildEmbed(target: User, guildName: string, stats: any) {
+    return new ZeroTwoEmbed()
+      .setTitle(`${Emojis.cat_utilidades} Contagem de mensagens de ${target.username}`)
+      .setDescription(`• **Mensagens enviadas em ${guildName}:**\n` +
+        `  ${Emojis.seta_menor} Hoje: **${stats.messagesToday || 0}**\n` +
+        `  ${Emojis.seta_menor} Essa Semana: **${stats.messagesWeek || 0}**\n` +
+        `  ${Emojis.seta_menor} Esse Mês: **${stats.messagesMonth || 0}**\n` +
+        `  ${Emojis.seta_menor} Total: **${stats.messagesTotal || 0}**`)
+      .setThumbnail(target.displayAvatarURL())
+      .setFooter({ text: `Utilize ${Emojis.seta_menor} /recompensas para ver as recompensas por mensagens.` });
   },
 };

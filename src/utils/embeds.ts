@@ -32,7 +32,21 @@ export class ZeroTwoEmbed extends EmbedBuilder {
 
   static warning(title: string, description: string): ZeroTwoEmbed {
     return new ZeroTwoEmbed()
-      .setTitle(`${Emojis.warning} ${title}`)
+      .setTitle(`${Emojis.warning || '⚠️'} ${title}`)
+      .setDescription(description)
+      .setColor('#ff3b69');
+  }
+
+  static permissionError(permission: string): ZeroTwoEmbed {
+    return new ZeroTwoEmbed()
+      .setTitle(`${Emojis.ban || '❌'} Acesso Negado`)
+      .setDescription(`Você não tem permissão para executar esta ação, Darling!\n\n**Permissão necessária:** \`${permission}\``)
+      .setColor('#ff3b69');
+  }
+
+  static info(title: string, description: string): ZeroTwoEmbed {
+    return new ZeroTwoEmbed()
+      .setTitle(`${Emojis.seta || '➔'} ${title}`)
       .setDescription(description)
       .setColor('#ff3b69');
   }

@@ -2,57 +2,54 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'disco
 import { SocialService } from '../../services/social/SocialService.js';
 import { CooldownService } from '../../services/economy/CooldownService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
+import { Emojis } from '../../utils/emojis.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('socar')
-    .setDescription('Dê um soco em um Darling.')
-    .addUserOption(opt => opt.setName('usuario').setDescription('O Darling que vai levar o soco').setRequired(true)),
+    .setDescription('Dê um soco divertido em um Darling.')
+    .addUserOption(opt => opt.setName('usuario').setDescription('O Darling que você quer socar').setRequired(true)),
 
   async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser('usuario', true);
-    if (target.id === interaction.user.id) return interaction.editReply({ content: 'Você não pode se socar, Darling! 🦖🌸' });
-
-    const cooldown = await CooldownService.checkCooldown(interaction.user.id, interaction.guildId!, 'socar');
-    if (cooldown.inCooldown) {
-      return interaction.editReply({ 
-        embeds: [ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para interagir novamente!`)] 
-      });
-    }
-
-    const embed = await SocialService.executeInteraction(
-      'abracar', 
-      interaction.user.id, 
-      target.id, 
-      interaction.user.username, 
-      target.username, 
-      interaction.guildId!
-    );
-    
-    await interaction.editReply({ content: `<@${target.id}>`, embeds: [embed] });
+    await this.handleInteraction(interaction, interaction.user, target, interaction.guildId!);
   },
 
   async executeText(message: Message, args: string[]) {
     const target = message.mentions.users.first() || (args[0] ? await message.client.users.fetch(args[0]).catch(() => null) : null);
-    if (!target) return message.reply({ content: 'Você precisa mencionar um Darling!' });
-    if (target.id === message.author.id) return message.reply({ content: 'Você não pode se socar, Darling! 🦖🌸' });
+    if (!target) return message.reply({ content: `${Emojis.warning} Você precisa mencionar um Darling para socar!` });
+    await this.handleInteraction(message, message.author, target, message.guildId!);
+  },
 
-    const cooldown = await CooldownService.checkCooldown(message.author.id, message.guildId!, 'socar');
-    if (cooldown.inCooldown) {
-      return message.reply({ 
-        embeds: [ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para interagir novamente!`)] 
-      });
+  async handleInteraction(context: ChatInputCommandInteraction | Message, author: any, target: any, guildId: string) {
+    const isInteraction = context instanceof ChatInputCommandInteraction;
+
+    if (target.id === author.id) {
+      const msg = `${Emojis.warning} Você não pode se socar, Darling! A Zero Two não gosta de auto-flagelação. 🦖🌸`;
+      return isInteraction ? context.editReply({ content: msg }) : context.reply({ content: msg });
     }
 
+    // Verificar Cooldown individual para 'socar'
+    const cooldown = await CooldownService.checkCooldown(author.id, guildId, 'socar');
+    if (cooldown.inCooldown) {
+      const embed = ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para socar alguém novamente!`);
+      return isInteraction ? context.editReply({ embeds: [embed] }) : context.reply({ embeds: [embed] });
+    }
+
+    // Sucesso! Definimos o cooldown individual
+    await CooldownService.setCooldown(author.id, guildId, 'socar');
+
     const embed = await SocialService.executeInteraction(
-      'abracar', 
-      message.author.id, 
+      'socar', 
+      author.id, 
       target.id, 
-      message.author.username, 
+      author.username, 
       target.username, 
-      message.guildId!
+      guildId
     );
     
-    await message.reply({ content: `<@${target.id}>`, embeds: [embed] });
+    return isInteraction 
+      ? context.editReply({ content: `<@${target.id}>`, embeds: [embed] })
+      : context.reply({ content: `<@${target.id}>`, embeds: [embed] });
   }
 };

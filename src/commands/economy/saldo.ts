@@ -17,7 +17,11 @@ export default {
       balance.bank
     );
 
-    await interaction.editReply({ files: [attachment] });
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply({ files: [attachment] });
+    } else {
+      await interaction.reply({ files: [attachment] });
+    }
   },
   async executeText(message: Message, args: string[]) {
     const balance = await EconomyService.getBalance(message.author.id, message.guild!.id);

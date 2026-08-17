@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message, User } from 'discord.js';
 import { LevelService } from '../../services/leveling/LevelService.js';
 import { ProfileService } from '../../services/profile/ProfileService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
@@ -11,8 +11,16 @@ export default {
     .addUserOption(opt => opt.setName('usuario').setDescription('O Darling que você quer ver o rank').setRequired(false)),
   async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser('usuario') || interaction.user;
-    const profile = await ProfileService.getProfile(target.id, interaction.guildId!);
-    
+    await this.render(target, interaction.guildId!, (payload: any) => interaction.editReply(payload));
+  },
+
+  async executeText(message: Message) {
+    const target = message.mentions.users.first() || message.author;
+    await this.render(target, message.guild!.id, (payload: any) => message.reply(payload));
+  },
+
+  async render(target: User, guildId: string, send: (payload: any) => Promise<unknown>) {
+    const profile = await ProfileService.getProfile(target.id, guildId);
     const nextLevelXP = LevelService.getXPForLevel(profile.level);
     const progress = (profile.xp / nextLevelXP) * 100;
     const progressBar = '█'.repeat(Math.floor(progress / 10)) + '░'.repeat(10 - Math.floor(progress / 10));
@@ -27,6 +35,6 @@ export default {
       )
       .setFooter({ text: 'Continue pilotando para subir de nível, Darling!' });
 
-    await interaction.editReply({ embeds: [embed] });
+    await send({ embeds: [embed] });
   },
 };

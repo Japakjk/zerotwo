@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 
 export default {
@@ -10,5 +10,12 @@ export default {
       .setTitle('🏓 Pong!')
       .setDescription(`Latência: **${interaction.client.ws.ping}ms**\nA Zero Two está respondendo rápido, Darling! 🦖🌸`);
     await interaction.editReply({ embeds: [embed] });
+  },
+
+  async executeText(message: Message) {
+    const embed = new ZeroTwoEmbed()
+      .setTitle('🏓 Pong!')
+      .setDescription(`Latência: **${message.client.ws.ping}ms**\nA Zero Two está respondendo rápido, Darling! 🦖🌸`);
+    await message.reply({ embeds: [embed] });
   },
 };

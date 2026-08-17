@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { LevelService } from '../../services/leveling/LevelService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { Emojis } from '../../utils/emojis.js';
@@ -8,16 +8,24 @@ export default {
     .setName('toplevel')
     .setDescription('Mostra os Darlings com os maiores níveis do servidor.'),
   async execute(interaction: ChatInputCommandInteraction) {
-    const leaderboard = await LevelService.getLeaderboard(interaction.guildId!);
+    await this.render(interaction.guildId!, interaction.client.user.displayAvatarURL(), (payload: any) => interaction.editReply(payload));
+  },
+
+  async executeText(message: Message) {
+    await this.render(message.guild!.id, message.client.user.displayAvatarURL(), (payload: any) => message.reply(payload));
+  },
+
+  async render(guildId: string, botAvatar: string, send: (payload: any) => Promise<unknown>) {
+    const leaderboard = await LevelService.getLeaderboard(guildId);
 
     if (leaderboard.length === 0) {
-      return interaction.editReply({ content: 'Ainda não há ninguém no ranking, Darling!' });
+      return send({ content: 'Ainda não há ninguém no ranking, Darling!' });
     }
 
     const embed = new ZeroTwoEmbed()
       .setTitle(`${Emojis.rank} Top Darlings do Garden`)
       .setDescription('Aqui estão os pistoqueiros mais experientes do servidor!')
-      .setThumbnail(interaction.client.user.displayAvatarURL());
+      .setThumbnail(botAvatar);
 
     const list = leaderboard.map((user: any, index: number) => {
       const numEmoji = (Emojis as any)[`n${index + 1}`] || `**${index + 1}.**`;
@@ -25,7 +33,6 @@ export default {
     }).join('\n');
 
     embed.setDescription(list);
-
-    await interaction.editReply({ embeds: [embed] });
+    await send({ embeds: [embed] });
   },
 };

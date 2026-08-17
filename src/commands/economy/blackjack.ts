@@ -62,13 +62,12 @@ export default {
 
     const balance = await EconomyService.getBalance(userId, guildId);
     if (balance.coins < amount) {
-      return interaction.reply({
-        content: `${Emojis.warning} **Darling**, você não tem D-Coins suficientes na carteira para apostar ${amount.toLocaleString()}!`,
-        ephemeral: true
+      return interaction.editReply({
+        content: `${Emojis.warning} **Darling**, você não tem D-Coins suficientes na carteira para apostar ${amount.toLocaleString()}!`
       });
     }
 
-    await EconomyService.removeCoins(userId, guildId, amount);
+    await EconomyService.removeCoins(userId, guildId, amount, 'Aposta no Blackjack', 'GAME');
 
     const deck = createDeck();
     const playerHand = [deck.pop()!, deck.pop()!];
@@ -79,13 +78,13 @@ export default {
 
     if (playerScore === 21) {
       const winnings = Math.floor(amount * 2.5);
-      await EconomyService.addCoins(userId, guildId, winnings, 'Blackjack: Blackjack natural!');
+      await EconomyService.addCoins(userId, guildId, winnings, 'Blackjack: Blackjack natural!', 'GAME');
       const embed = new EmbedBuilder()
         .setColor(0xff3b69)
         .setTitle(`${Emojis.achievement} **Blackjack - Vitória Perfeita!**`)
         .setDescription(`Você conseguiu um **Blackjack natural (21)**!\n\nCartas: ${playerHand.map(c => `${c.name}${c.suit}`).join(', ')}\n\nVocê ganhou **${winnings.toLocaleString()} D-Coins** ${Emojis.coin}!`)
         .setTimestamp();
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -102,7 +101,7 @@ export default {
         `*O que você deseja fazer, Darling?*`
       );
 
-    const response = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    const response = await interaction.editReply({ embeds: [embed], components: [row] });
 
     const collector = response.createMessageComponentCollector({
       componentType: ComponentType.Button,
@@ -150,10 +149,10 @@ export default {
         let resultMsg = '';
         if (finalDealerScore > 21 || finalPlayerScore > finalDealerScore) {
           const reward = amount * 2;
-          await EconomyService.addCoins(userId, guildId, reward, 'Blackjack: vitória');
+          await EconomyService.addCoins(userId, guildId, reward, 'Venceu no Blackjack', 'GAME');
           resultMsg = `🎉 **Parabéns, Darling! Você venceu a banca e ganhou ${reward.toLocaleString()} D-Coins** ${Emojis.coin}!`;
         } else if (finalPlayerScore === finalDealerScore) {
-          await EconomyService.addCoins(userId, guildId, amount, 'Blackjack: empate');
+          await EconomyService.addCoins(userId, guildId, amount, 'Empate no Blackjack (Devolução)', 'GAME');
           resultMsg = `🤝 **Empate! Sua aposta de ${amount.toLocaleString()} D-Coins foi devolvida.**`;
         } else {
           resultMsg = `💀 **A banca venceu! Você perdeu ${amount.toLocaleString()} D-Coins** ${Emojis.coin}.`;

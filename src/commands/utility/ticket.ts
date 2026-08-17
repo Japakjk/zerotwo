@@ -10,7 +10,18 @@ export default {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction: ChatInputCommandInteraction) {
     const channel = (interaction.options.getChannel('canal') || interaction.channel) as any;
+    await this.sendPanel(interaction, channel, true);
+  },
 
+  async executeText(message: any, args: string[]) {
+    if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+      return message.reply(`${Emojis.ban} Apenas administradores podem enviar o painel de tickets!`);
+    }
+    const channel = message.mentions.channels.first() || message.channel;
+    await this.sendPanel(message, channel, false);
+  },
+
+  async sendPanel(context: any, channel: any, isInteraction: boolean) {
     const embed = new ZeroTwoEmbed()
       .setTitle('🎫 Central de Atendimento — Garden')
       .setDescription(`${Emojis.seta} Precisa de ajuda, deseja comprar um **VIP** ou falar com a staff da **Zero Two**?\n\nClique no botão abaixo para abrir o seu ticket privado e nossa equipe irá atendê-lo o mais rápido possível! 🦖❤️`)
@@ -32,8 +43,8 @@ export default {
 
     await channel.send({ embeds: [embed], components: [row] });
 
-    await interaction.editReply({
-      content: `${Emojis.check} Painel de tickets enviado com sucesso para ${channel}!`,
-    });
+    const msg = `${Emojis.check} Painel de tickets enviado com sucesso para ${channel}!`;
+    if (isInteraction) await context.editReply({ content: msg });
+    else await context.reply({ content: msg });
   },
 };

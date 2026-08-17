@@ -1,133 +1,192 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction, ComponentType, EmbedBuilder, Message } from 'discord.js';
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuInteraction,
+  ComponentType,
+  Message,
+  AutocompleteInteraction,
+} from 'discord.js';
+import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { Emojis } from '../../utils/emojis.js';
-import { DashboardService } from '../../services/dashboard/DashboardService.js';
+import { GuildModel } from '../../database/models/Guild.js';
+import { config } from '../../config/config.js';
+
+const categories = [
+  { name: 'Economia', value: 'economy', emoji: Emojis.economy || '💰', description: 'D-Coins, trabalho, banco e jogos.' },
+  { name: 'Utilidades', value: 'utility', emoji: Emojis.utility || '✨', description: 'Ajuda, configurações, lembretes e informações.' },
+  { name: 'Interação', value: 'social', emoji: Emojis.social || '💖', description: 'Comandos sociais e relacionamentos.' },
+  { name: 'Moderação', value: 'moderation', emoji: Emojis.moderation || '🛡️', description: 'Punições, canais e histórico de moderação.' },
+  { name: 'Administração', value: 'admin', emoji: Emojis.admin || '⚙️', description: 'Owner, configuração e ferramentas administrativas.' },
+];
+
+const categoryFolders: Record<string, string[]> = {
+  economy: ['economy', 'games'],
+  utility: ['utility'],
+  social: ['social'],
+  moderation: ['moderation'],
+  admin: ['owner'],
+};
+
+function getCommandName(command: any): string {
+  return command?.data?.name || command?.name || '';
+}
 
 export default {
   data: new SlashCommandBuilder()
     .setName('help')
-    .setDescription('Exibe o painel de ajuda e comandos da Zero Two.'),
+    .setDescription('Exibe o painel de ajuda e os comandos disponíveis da Loirinha.')
+    .addStringOption(opt =>
+      opt.setName('categoria')
+        .setDescription('Escolha uma categoria específica')
+        .setRequired(false)
+        .setAutocomplete(true)
+    ),
+  deferEphemeral: true,
+
+  async autocomplete(interaction: AutocompleteInteraction) {
+    const focusedValue = interaction.options.getFocused().toLowerCase();
+    const filtered = categories
+      .filter(choice => choice.name.toLowerCase().includes(focusedValue) || choice.value.includes(focusedValue))
+      .slice(0, 25);
+
+    await interaction.respond(filtered.map(choice => ({ name: choice.name, value: choice.value })));
+  },
 
   async execute(interaction: ChatInputCommandInteraction) {
-    await this.sendHelpPanel(interaction);
+    const category = interaction.options.getString('categoria');
+    if (category) {
+      await this.sendCategoryEmbed(interaction, category);
+    } else {
+      await this.sendHelpPanel(interaction);
+    }
   },
 
   async executeText(message: Message, args: string[]) {
-    await this.sendHelpPanel(message);
+    const category = args[0]?.toLowerCase();
+    const found = categories.find(c => c.value === category || c.name.toLowerCase() === category);
+
+    if (found) {
+      await this.sendCategoryEmbed(message, found.value);
+    } else {
+      await this.sendHelpPanel(message);
+    }
+  },
+
+  async getPrefix(context: ChatInputCommandInteraction | Message): Promise<string> {
+    const guildId = context.guildId || context.guild?.id;
+    if (!guildId) return config.DEFAULT_PREFIX;
+
+    try {
+      const guildDb = await GuildModel.findOne({ guildId });
+      return guildDb?.prefix || config.DEFAULT_PREFIX;
+    } catch {
+      return config.DEFAULT_PREFIX;
+    }
   },
 
   async sendHelpPanel(context: ChatInputCommandInteraction | Message) {
     const isInteraction = context instanceof ChatInputCommandInteraction;
     const user = isInteraction ? context.user : context.author;
-    const client = context.client;
-    const guildId = context.guildId || context.guild?.id!;
+    const prefix = await this.getPrefix(context);
 
-    let prefix = 'zero!';
-    try {
-      const config = await DashboardService.getGuildConfig(guildId);
-      if (config?.prefix) prefix = config.prefix;
-    } catch {}
-
-    const embed = new EmbedBuilder()
-      .setColor(0xff3b69)
-      .setTitle(`🌸 **Painel de Ajuda | Zero Two**`)
-      .setDescription(`• Olá **Darling** **@${user.username}**, este é o meu painel oficial de comandos.\n\n` +
-        `• Meus prefixos ativos neste servidor são **\`/\`** (Slash) e **\`${prefix}\`** (Tradicional).\n\n` +
-        `-> **Selecione uma categoria abaixo** no menu interativo para explorar todas as minhas funcionalidades!`)
-      .setThumbnail(client.user?.displayAvatarURL() || null)
-      .setFooter({ text: `Zero Two Bot - Darling in the Franxx` });
+    const embed = new ZeroTwoEmbed()
+      .setTitle(`${Emojis.social || '🌸'} Painel de Ajuda | Zero Two`)
+      .setDescription(
+        `Olá **Darling ${user.username}**! Este é o painel oficial de comandos.\n\n` +
+        `Prefixos ativos: **\`/\`** e **\`${prefix}\`**.\n\n` +
+        `${Emojis.seta || '➜'} Selecione uma categoria para consultar somente os comandos realmente carregados pelo bot.`
+      )
+      .setThumbnail(context.client.user?.displayAvatarURL() || null);
 
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('help_category')
-        .setPlaceholder('🌸 Selecione uma categoria...')
-        .addOptions([
-          { label: 'Economia', description: 'D-Coins, Trabalho, Banco e Cassino', value: 'economy', emoji: Emojis.economy || '💰' },
-          { label: 'Utilidades', description: 'Prefixos, Lembretes, AFK e Info', value: 'utility', emoji: Emojis.utility || '✨' },
-          { label: 'Interação', description: 'Social, Beijos, Abraços e Ship', value: 'social', emoji: Emojis.social || '💖' },
-          { label: 'Moderação', description: 'Ban, Kick, Mute, Warn e Canais', value: 'moderation', emoji: Emojis.moderation || '🛡️' },
-          { label: 'Administração', description: 'Sorteios, Webhooks, Welcome e AutoRole', value: 'admin', emoji: Emojis.admin || '⚙️' },
-        ])
+        .setPlaceholder('Selecione uma categoria...')
+        .addOptions(categories.map(c => ({
+          label: c.name,
+          description: c.description,
+          value: c.value,
+          emoji: c.emoji,
+        })))
     );
 
-    const response = isInteraction 
-      ? await context.reply({ embeds: [embed], components: [row], fetchReply: true })
+    const response = isInteraction
+      ? await context.editReply({ embeds: [embed], components: [row] })
       : await context.reply({ embeds: [embed], components: [row] });
 
     const collector = response.createMessageComponentCollector({
       componentType: ComponentType.StringSelect,
-      time: 120000
+      time: 180000,
+      filter: i => i.isStringSelectMenu(),
     });
 
     collector.on('collect', async (i: StringSelectMenuInteraction) => {
       if (i.user.id !== user.id) {
-        await i.reply({ content: `${Emojis.warning} **Darling**, apenas quem executou o comando pode usar este menu!`, ephemeral: true });
+        await i.reply({
+          embeds: [ZeroTwoEmbed.warning('Painel reservado', 'Este painel pertence a quem executou o comando. Execute **/help** para abrir o seu próprio painel.')],
+          ephemeral: true,
+        });
         return;
       }
 
-      const cat = i.values[0];
-      const catEmbed = new EmbedBuilder()
-        .setColor(0xff3b69)
-        .setThumbnail(client.user?.displayAvatarURL() || null)
-        .setFooter({ text: `Zero Two Bot - Darling in the Franxx` });
-
-      if (cat === 'economy') {
-        catEmbed.setTitle(`${Emojis.economy} **Comandos de Economia**`)
-          .setDescription(
-            `• **[] = Obrigatório / () = Opcional**\n\n` +
-            `• ${Emojis.seta} **/daily**, **/semanal**, **/mensal**:\n  ◦ Resgate seus **D-Coins** periódicos.\n` +
-            `• ${Emojis.seta} **/work**:\n  ◦ Ganhe coins trabalhando (15-20 min).\n` +
-            `• ${Emojis.seta} **/banco [depositar/sacar]**:\n  ◦ Gerencie seu cofre protegido.\n` +
-            `• ${Emojis.seta} **/pay [usuario] [quant]**:\n  ◦ Transfira coins para outro Darling.\n` +
-            `• ${Emojis.seta} **/roubar [usuario]**:\n  ◦ Tente roubar a carteira alheia.\n` +
-            `• ${Emojis.seta} **/saldo (usuario)**:\n  ◦ Veja o cartão visual de saldo.\n` +
-            `• ${Emojis.seta} **/vip (usuario)**:\n  ◦ Veja seu status e benefícios VIP.\n` +
-            `• ${Emojis.seta} **Cassino**: \`/blackjack\`, \`/roleta\`, \`/crash\`, \`/mines\`, \`/slots\`.`
-          );
-      } else if (cat === 'utility') {
-        catEmbed.setTitle(`${Emojis.utility} **Comandos de Utilidades**`)
-          .setDescription(
-            `• **[] = Obrigatório / () = Opcional**\n\n` +
-            `• ${Emojis.seta} **/help**, **/ping**:\n  ◦ Comandos básicos do bot.\n` +
-            `• ${Emojis.seta} **/prefixo (novo)**:\n  ◦ Altera o prefixo do servidor.\n` +
-            `• ${Emojis.seta} **/lembrete [tempo] [motivo]**:\n  ◦ A Zero Two te avisa no futuro.\n` +
-            `• ${Emojis.seta} **/afk (motivo)**:\n  ◦ Define seu status como ausente.\n` +
-            `• ${Emojis.seta} **/avatar**, **/banner**, **/serverinfo**:\n  ◦ Informações visuais e do servidor.`
-          );
-      } else if (cat === 'social') {
-        catEmbed.setTitle(`${Emojis.social} **Comandos de Interação**`)
-          .setDescription(
-            `• **[] = Obrigatório / () = Opcional**\n\n` +
-            `• ${Emojis.seta} **/abracar**, **/beijar**, **/cafune**, **/acariciar**:\n  ◦ Demonstre carinho (Gera coins!).\n` +
-            `• ${Emojis.seta} **/socar**, **/tapa**, **/provocar**, **/cosquinha**:\n  ◦ Interações divertidas.\n` +
-            `• ${Emojis.seta} **/dancar**, **/olhar**, **/flertar**, **/cumprimentar**:\n  ◦ Mais interações sociais.\n` +
-            `• ${Emojis.seta} **/ship [user1] (user2)**:\n  ◦ Veja a compatibilidade do casal.\n` +
-            `• ${Emojis.seta} **/namorar [usuario]**:\n  ◦ Peça alguém em casamento.\n` +
-            `• ${Emojis.seta} **/bio [texto]**:\n  ◦ Defina sua biografia no perfil.\n` +
-            `• ${Emojis.seta} **/rep [usuario]**:\n  ◦ Dê reputação a um Darling.`
-          );
-      } else if (cat === 'moderation') {
-        catEmbed.setTitle(`${Emojis.moderation} **Comandos de Moderação**`)
-          .setDescription(
-            `• **[] = Obrigatório / () = Opcional**\n\n` +
-            `• ${Emojis.seta} **/ban**, **/unban**, **/kick**:\n  ◦ Punições para membros.\n` +
-            `• ${Emojis.seta} **/mute**, **/unmute**:\n  ◦ Silencia membros temporariamente.\n` +
-            `• ${Emojis.seta} **/warn [usuario] [motivo]**:\n  ◦ Aplica um aviso formal (Case).\n` +
-            `• ${Emojis.seta} **/clear [quantidade]**:\n  ◦ Limpa o chat rapidamente.\n` +
-            `• ${Emojis.seta} **/lock**, **/unlock**:\n  ◦ Controla o envio de mensagens.`
-          );
-      } else if (cat === 'admin') {
-        catEmbed.setTitle(`${Emojis.admin} **Comandos de Administração**`)
-          .setDescription(
-            `• **[] = Obrigatório / () = Opcional**\n\n` +
-            `• ${Emojis.seta} **/addemoji**, **/removeemoji**, **/nuke**:\n  ◦ Gestão de emojis e canais.\n` +
-            `• ${Emojis.seta} **/sorteio**, **/webhook**, **/ticket**:\n  ◦ Ferramentas de engajamento e suporte.\n` +
-            `• ${Emojis.seta} **/welcome**, **/autorole**:\n  ◦ Configura entrada de membros.\n` +
-            `• ${Emojis.seta} **/verificação**:\n  ◦ Cria o painel de verificação.\n` +
-            `• ${Emojis.seta} **/setvip [usuario] [nivel]**:\n  ◦ Gerencia níveis VIP (Staff).`
-          );
-      }
-
-      await i.update({ embeds: [catEmbed], components: [row] });
+      await this.sendCategoryEmbed(i, i.values[0], true);
     });
+
+    collector.on('end', async () => {
+      const expiredEmbed = ZeroTwoEmbed.info(
+        'Painel expirado',
+        'Este painel de ajuda expirou. Execute **/help** novamente para consultar os comandos atuais.'
+      ).setThumbnail(context.client.user?.displayAvatarURL() || null);
+      await response.edit({ embeds: [expiredEmbed], components: [] }).catch(() => {});
+    });
+  },
+
+  async sendCategoryEmbed(
+    context: ChatInputCommandInteraction | Message | StringSelectMenuInteraction,
+    category: string,
+    isUpdate = false,
+  ) {
+    const categoryInfo = categories.find(c => c.value === category);
+    const folders = categoryFolders[category];
+    const commands = folders
+      ? [...(context.client as any).commands.values()]
+        .filter((command: any) => folders.includes(command.category))
+        .sort((a: any, b: any) => getCommandName(a).localeCompare(getCommandName(b)))
+      : [];
+
+    const embed = new ZeroTwoEmbed()
+      .setTitle(`${categoryInfo?.emoji || Emojis.utility || '🌸'} ${categoryInfo?.name || 'Categoria'}`)
+      .setThumbnail(context.client.user?.displayAvatarURL() || null);
+
+    if (commands.length === 0) {
+      embed.setDescription(
+        `${Emojis.warning || '⚠️'} Não encontrei comandos carregados nesta categoria.\n\n` +
+        `${Emojis.seta || '➜'} Volte ao menu ou execute **/help** novamente.`
+      );
+    } else {
+      const prefix = context.guildId
+        ? await GuildModel.findOne({ guildId: context.guildId }).then((g: any) => g?.prefix || config.DEFAULT_PREFIX).catch(() => config.DEFAULT_PREFIX)
+        : config.DEFAULT_PREFIX;
+      const commandLines = commands.map((command: any) => {
+        const name = getCommandName(command);
+        const description = command.data?.description || 'Sem descrição disponível.';
+        return `${Emojis.seta || '➜'} **/${name}** · **\`${prefix}${name}\`** — ${description}`;
+      });
+
+      embed.setDescription(
+        `Prefixos: **\`/\`** e **\`${prefix}\`**.\n\n` +
+        commandLines.join('\n')
+      );
+    }
+
+    if (isUpdate && context instanceof StringSelectMenuInteraction) {
+      await context.update({ embeds: [embed] });
+    } else if (context instanceof ChatInputCommandInteraction) {
+      await context.editReply({ embeds: [embed] });
+    } else if (context instanceof Message) {
+      await context.reply({ embeds: [embed] });
+    }
   },
 };

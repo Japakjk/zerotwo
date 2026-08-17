@@ -14,8 +14,11 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser('usuario', true);
     const reason = interaction.options.getString('motivo', true);
+    const member = await interaction.guild?.members.fetch(target.id).catch(() => null);
 
-    const modCase = await ModerationService.createCase(interaction.guild!, target.id, interaction.user.id, 'warn', reason);
+    if (!member) return interaction.editReply({ content: 'Membro não encontrado no Garden, Darling!' });
+
+    const modCase = await ModerationService.warn(member, interaction.user.id, reason);
     const userCases = await ModerationService.getCases(interaction.guild!.id, target.id);
     const warnCount = userCases.filter((c: any) => c.action === 'warn').length;
 
@@ -39,7 +42,10 @@ export default {
       return message.reply({ content: 'Uso correto: `zero!warn @usuario [motivo]`' });
     }
 
-    const modCase = await ModerationService.createCase(message.guild!, target.id, message.author.id, 'warn', reason);
+    const member = await message.guild?.members.fetch(target.id).catch(() => null);
+    if (!member) return message.reply({ content: 'Membro não encontrado!' });
+
+    const modCase = await ModerationService.warn(member, message.author.id, reason);
     const userCases = await ModerationService.getCases(message.guild!.id, target.id);
     const warnCount = userCases.filter((c: any) => c.action === 'warn').length;
 

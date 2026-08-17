@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 
 export default {
@@ -12,5 +12,13 @@ export default {
       .setTitle(`🖼️ Avatar de ${user.username}`)
       .setImage(user.displayAvatarURL({ size: 1024 }));
     await interaction.editReply({ embeds: [embed] });
+  },
+
+  async executeText(message: Message) {
+    const user = message.mentions.users.first() || message.author;
+    const embed = new ZeroTwoEmbed()
+      .setTitle(`🖼️ Avatar de ${user.username}`)
+      .setImage(user.displayAvatarURL({ size: 1024 }));
+    await message.reply({ embeds: [embed] });
   },
 };

@@ -16,8 +16,7 @@ export default {
     const reason = interaction.options.getString('motivo') || 'Nenhum motivo fornecido.';
 
     try {
-      await interaction.guild?.members.unban(targetId, reason);
-      const modCase = await ModerationService.createCase(interaction.guild!, targetId, interaction.user.id, 'unban', reason);
+      const modCase = await ModerationService.unban(interaction.guild!, targetId, interaction.user.id, reason);
 
       const embed = ZeroTwoEmbed.success('Usuário Desbanido', `O ID **${targetId}** foi perdoado e pode voltar ao Garden.`)
         .addFields(
@@ -27,21 +26,25 @@ export default {
 
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      await interaction.editReply({ content: 'Não encontrei esse banimento ou o ID é inválido, Darling!' });
+      console.error('[unban] falha ao remover banimento', { guildId: interaction.guildId, targetId, moderatorId: interaction.user.id, error });
+      await interaction.editReply({ embeds: [ZeroTwoEmbed.error('Desbanimento não concluído', 'Não encontrei um banimento ativo para este ID ou o Discord recusou a alteração. Confirme o ID e `BanMembers`.') ] });
     }
   },
 
   async executeText(message: Message, args: string[]) {
-    if (!message.member?.permissions.has(PermissionFlagsBits.BanMembers)) return;
+    if (!message.member?.permissions.has(PermissionFlagsBits.BanMembers)) {
+      return message.reply({ embeds: [ZeroTwoEmbed.permissionError('BanMembers')] });
+    }
 
     const targetId = args[0];
     if (!targetId) return message.reply({ content: 'Forneça o ID do usuário para desbanir!' });
 
     try {
-      await message.guild?.members.unban(targetId);
-      await message.reply({ content: `${Emojis.check} Usuário **${targetId}** desbanido com sucesso!` });
-    } catch (err) {
-      await message.reply({ content: 'Erro ao desbanir usuário. Verifique o ID.' });
+      const modCase = await ModerationService.unban(message.guild!, targetId, message.author.id, 'Comando de texto');
+      await message.reply({ content: `${Emojis.check} Usuário **${targetId}** desbanido com sucesso! (Caso #${modCase.caseId})` });
+    } catch (error) {
+      console.error('[unban] falha ao remover banimento por prefixo', { guildId: message.guildId, targetId, moderatorId: message.author.id, error });
+      await message.reply({ embeds: [ZeroTwoEmbed.error('Desbanimento não concluído', 'Não encontrei um banimento ativo para este ID ou o Discord recusou a alteração. Confirme o ID e `BanMembers`.') ] });
     }
   }
 };

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, Message } from 'discord.js';
 import { EconomyService } from '../../services/economy/EconomyService.js';
 import { Emojis } from '../../utils/emojis.js';
 
@@ -24,15 +24,22 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     const choice = interaction.options.getString('cor', true);
     const amount = interaction.options.getInteger('quantidade', true);
-    const userId = interaction.user.id;
-    const guildId = interaction.guildId!;
+    await this.play(interaction.user.id, interaction.guildId!, choice, amount, (payload: any) => interaction.editReply(payload));
+  },
 
+  async executeText(message: Message, args: string[]) {
+    const choice = (args[0] || '').toLowerCase();
+    const amount = Number(args[1]);
+    if (!['vermelho', 'preto', 'verde'].includes(choice) || !Number.isInteger(amount) || amount < 1000) {
+      return message.reply({ content: 'Use `zero!roleta <vermelho|preto|verde> <quantidade>` com aposta mínima de **1.000 D-Coins**.' });
+    }
+    await this.play(message.author.id, message.guild!.id, choice, amount, (payload: any) => message.reply(payload));
+  },
+
+  async play(userId: string, guildId: string, choice: string, amount: number, send: (payload: any) => Promise<unknown>) {
     const balance = await EconomyService.getBalance(userId, guildId);
     if (balance.coins < amount) {
-      return interaction.reply({
-        content: `${Emojis.warning} **Darling**, você não tem D-Coins suficientes na carteira para esta aposta!`,
-        ephemeral: true
-      });
+      return send({ content: `${Emojis.warning} **Darling**, você não tem D-Coins suficientes na carteira para esta aposta!` });
     }
 
     // Sortear resultado: 0 (Verde), 1-7 (Vermelho), 8-14 (Preto)
@@ -47,21 +54,21 @@ export default {
 
     if (won) {
       const winnings = amount * multiplier;
-      await EconomyService.addCoins(userId, guildId, winnings - amount, `Roleta: vitória (${resultColor})`);
+      await EconomyService.addCoins(userId, guildId, winnings - amount, `Venceu na Roleta (${resultColor})`, 'GAME');
       const embed = new EmbedBuilder()
         .setColor(0xff3b69)
         .setTitle(`${Emojis.achievement} **Roleta da Zero Two - Vitória!**`)
         .setDescription(`A bola caiu no **${resultColor.toUpperCase()}**!\n\nParabéns **Darling**, você ganhou **${winnings.toLocaleString()} D-Coins** ${Emojis.coin}!`)
         .setTimestamp();
-      await interaction.reply({ embeds: [embed] });
+      await send({ embeds: [embed] });
     } else {
-      await EconomyService.removeCoins(userId, guildId, amount);
+      await EconomyService.removeCoins(userId, guildId, amount, `Perdeu na Roleta (${resultColor})`, 'GAME');
       const embed = new EmbedBuilder()
         .setColor(0xff3b69)
         .setTitle(`${Emojis.warning} **Roleta da Zero Two - Derrota**`)
         .setDescription(`A bola caiu no **${resultColor.toUpperCase()}** (você escolheu *${choice}*).\n\n*A Zero Two levou sua aposta de* **${amount.toLocaleString()} D-Coins** ${Emojis.coin}.`)
         .setTimestamp();
-      await interaction.reply({ embeds: [embed] });
+      await send({ embeds: [embed] });
     }
   }
 };

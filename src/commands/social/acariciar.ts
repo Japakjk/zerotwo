@@ -16,12 +16,12 @@ export default {
     const cooldown = await CooldownService.checkCooldown(interaction.user.id, interaction.guildId!, 'acariciar');
     if (cooldown.inCooldown) {
       return interaction.editReply({ 
-        embeds: [ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para interagir novamente!`)] 
+        embeds: [ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para acariciar alguém novamente!`)] 
       });
     }
 
     const embed = await SocialService.executeInteraction(
-      'abracar', 
+      'acariciar', 
       interaction.user.id, 
       target.id, 
       interaction.user.username, 
@@ -29,6 +29,7 @@ export default {
       interaction.guildId!
     );
     
+    await CooldownService.setCooldown(interaction.user.id, interaction.guildId!, 'acariciar');
     await interaction.editReply({ content: `<@${target.id}>`, embeds: [embed] });
   },
 
@@ -40,12 +41,12 @@ export default {
     const cooldown = await CooldownService.checkCooldown(message.author.id, message.guildId!, 'acariciar');
     if (cooldown.inCooldown) {
       return message.reply({ 
-        embeds: [ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para interagir novamente!`)] 
+        embeds: [ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para acariciar alguém novamente!`)] 
       });
     }
 
     const embed = await SocialService.executeInteraction(
-      'abracar', 
+      'acariciar', 
       message.author.id, 
       target.id, 
       message.author.username, 
@@ -53,6 +54,7 @@ export default {
       message.guildId!
     );
     
+    await CooldownService.setCooldown(message.author.id, message.guildId!, 'acariciar');
     await message.reply({ content: `<@${target.id}>`, embeds: [embed] });
   }
 };

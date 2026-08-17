@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, Message } from 'discord.js';
+import { GameService } from '../../services/games/GameService.js';
 import { EconomyService } from '../../services/economy/EconomyService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { Emojis } from '../../utils/emojis.js';
@@ -25,19 +26,18 @@ export default {
   async runGame(context: ChatInputCommandInteraction | Message, bet: number) {
     const userId = context instanceof Message ? context.author.id : context.user.id;
     const guildId = context.guildId!;
+    const isInteraction = context instanceof ChatInputCommandInteraction;
 
-    const hasCoins = await EconomyService.removeCoins(userId, guildId, bet);
-    if (!hasCoins) {
+    const gameData = await GameService.processCrash(userId, guildId, bet);
+    if (!gameData) {
       const errorMsg = 'Você não tem D-Coins suficientes, Darling! 🦖💢';
-      return context instanceof Message ? context.reply(errorMsg) : context.editReply(errorMsg);
+      return isInteraction ? context.editReply(errorMsg) : context.reply(errorMsg);
     }
 
+    const { crashPoint } = gameData;
     let multiplier = 1.0;
     let crashed = false;
     let cashedOut = false;
-    
-    // Ponto de crash logarítmico para ser mais realista
-    const crashPoint = Math.max(1.0, parseFloat((0.99 / (1 - Math.random())).toFixed(2)));
 
     const embed = new ZeroTwoEmbed()
       .setTitle(`🚀 Crash Franxx`)
@@ -47,9 +47,9 @@ export default {
     const btn = new ButtonBuilder().setCustomId('crash_out').setLabel('CASH OUT').setStyle(ButtonStyle.Danger);
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(btn);
 
-    const response = context instanceof Message 
-      ? await context.reply({ embeds: [embed], components: [row] })
-      : await context.editReply({ embeds: [embed], components: [row] });
+    const response = isInteraction 
+      ? await context.editReply({ embeds: [embed], components: [row] })
+      : await context.reply({ embeds: [embed], components: [row] });
 
     const collector = response.createMessageComponentCollector({ componentType: ComponentType.Button, time: 60000 });
 
@@ -59,7 +59,6 @@ export default {
         return;
       }
 
-      // Incremento dinâmico: quanto maior o multiplicador, mais rápido ele sobe
       const increment = multiplier < 2 ? 0.1 : multiplier < 5 ? 0.2 : 0.5;
       multiplier = parseFloat((multiplier + increment).toFixed(2));
 
@@ -68,20 +67,15 @@ export default {
         clearInterval(gameInterval);
         embed.setDescription(`${Emojis.ban} **CRASHED em ${multiplier.toFixed(2)}x!**\n\nVocê perdeu **${bet.toLocaleString()} D-Coins**. O Franxx não aguentou... ❤️`);
         
-        if (context instanceof Message) {
-          await response.edit({ embeds: [embed], components: [] });
-        } else {
-          await context.editReply({ embeds: [embed], components: [] });
-        }
+        if (isInteraction) await context.editReply({ embeds: [embed], components: [] }).catch(() => {});
+        else await response.edit({ embeds: [embed], components: [] }).catch(() => {});
+        
         collector.stop();
       } else {
         embed.setDescription(`${Emojis.coin} Aposta: **${bet.toLocaleString()} D-Coins**\n${Emojis.seta} Multiplicador: **${multiplier.toFixed(2)}x**\n\nSaia agora ou arrisque mais, Darling!`);
         
-        if (context instanceof Message) {
-          await response.edit({ embeds: [embed] });
-        } else {
-          await context.editReply({ embeds: [embed] });
-        }
+        if (isInteraction) await context.editReply({ embeds: [embed] }).catch(() => {});
+        else await response.edit({ embeds: [embed] }).catch(() => {});
       }
     }, 1500);
 

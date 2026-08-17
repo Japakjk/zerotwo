@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { EconomyService } from '../../services/economy/EconomyService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import ms from 'ms';
@@ -12,5 +12,14 @@ export default {
     }
     const embed = ZeroTwoEmbed.success('Recompensa Mensal', `Você resgatou **${result.amount?.toLocaleString()} D-Coins**! O Garden orgulha-se de você. 🦖🌸`);
     await interaction.editReply({ embeds: [embed] });
+  },
+
+  async executeText(message: Message) {
+    const result = await EconomyService.claimMonthly(message.author.id, message.guildId!);
+    if (!result.success) {
+      return message.reply({ content: `Ainda não, Darling! Volte em **${ms(result.nextAvailable! - Date.now(), { long: true })}**` });
+    }
+    const embed = ZeroTwoEmbed.success('Recompensa Mensal', `Você resgatou **${result.amount?.toLocaleString()} D-Coins**! O Garden orgulha-se de você. 🦖🌸`);
+    await message.reply({ embeds: [embed] });
   },
 };

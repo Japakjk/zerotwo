@@ -42,11 +42,30 @@ export class CooldownService {
         };
       }
     }
+    
+    return { inCooldown: false, remaining: 0, remainingFormatted: '0s' };
+  }
+
+  static async setCooldown(userId: string, guildId: string, commandName: string) {
+    if (!this.cooldowns.has(commandName)) {
+      this.cooldowns.set(commandName, new Map());
+    }
+
+    const user = await UserModel.findOne({ userId, guildId });
+    const vipLevel = user?.vipLevel || 0;
+    const timestamps = this.cooldowns.get(commandName)!;
+    const now = Date.now();
+
+    let cooldownAmount = 5000;
+    if (this.specialCommands.includes(commandName)) {
+      cooldownAmount = (Math.floor(Math.random() * (20 - 15 + 1)) + 15) * 60 * 1000;
+    }
+
+    const reduction = Math.min(vipLevel * 0.10, 0.50);
+    cooldownAmount = Math.floor(cooldownAmount * (1 - reduction));
 
     timestamps.set(userId, now + cooldownAmount);
     setTimeout(() => timestamps.delete(userId), cooldownAmount);
-    
-    return { inCooldown: false, remaining: 0, remainingFormatted: '0s' };
   }
 
   private static formatTime(seconds: number): string {

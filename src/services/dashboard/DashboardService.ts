@@ -1,5 +1,11 @@
-const DASHBOARD_URL = (process.env.DASHBOARD_API_URL || 'https://zerotwodash-ktrwzfex.manus.space').replace(/\/$/, '');
-const BOT_API_KEY = process.env.BOT_API_KEY || 'zero_two_secure_railway_key_2026';
+import { config } from '../../config/config.js';
+
+const DASHBOARD_URL = (process.env.DASHBOARD_API_URL || 'https://zerotwo-dashboard-production.up.railway.app').replace(/\/$/, '');
+const BOT_API_KEY = process.env.BOT_API_KEY;
+
+function dashboardConfigured() {
+  return Boolean(BOT_API_KEY);
+}
 
 function dashboardHeaders() {
   return {
@@ -10,6 +16,17 @@ function dashboardHeaders() {
 
 export class DashboardService {
   static async getGuildConfig(guildId: string) {
+    if (!dashboardConfigured()) {
+      return {
+        prefix: config.DEFAULT_PREFIX,
+        autoModEnabled: true,
+        welcomeEnabled: false,
+        welcomeChannel: 'geral',
+        welcomeMessage: 'Bem-vindo(a) {user} ao Garden!',
+        autoRoleEnabled: false,
+        antiRaidEnabled: false,
+      };
+    }
     try {
       const response = await fetch(`${DASHBOARD_URL}/api/bot/guild-config/${encodeURIComponent(guildId)}`, {
         headers: dashboardHeaders(),
@@ -19,7 +36,7 @@ export class DashboardService {
     } catch (error: any) {
       console.error(`[DashboardBridge] Erro ao buscar config da guilda ${guildId}:`, error.message);
       return {
-        prefix: 'zero!',
+        prefix: config.DEFAULT_PREFIX,
         autoModEnabled: true,
         welcomeEnabled: false,
         welcomeChannel: 'geral',
@@ -31,6 +48,7 @@ export class DashboardService {
   }
 
   static async syncGuild(guild: { id: string; name: string; ownerId?: string; iconURL?: () => string | null }) {
+    if (!dashboardConfigured()) return;
     try {
       await fetch(`${DASHBOARD_URL}/api/bot/sync-guild`, {
         method: 'POST',
@@ -48,6 +66,7 @@ export class DashboardService {
   }
 
   static async reportCommandUsage(guildId: string, commandName: string, userId: string) {
+    if (!dashboardConfigured()) return;
     try {
       await fetch(`${DASHBOARD_URL}/api/bot/command-metric`, {
         method: 'POST',

@@ -9,8 +9,8 @@ export const MESSAGE_REWARDS = [
 ];
 
 export class MessageService {
-  static async recordMessage(userId: string, guildId: string) {
-    let user = await UserModel.findOne({ userId, guildId });
+  static async recordMessage(userId: string, guildId: string, userDoc?: any) {
+    let user = userDoc || await UserModel.findOne({ userId, guildId });
     if (!user) {
       user = await UserModel.create({
         userId,
@@ -30,7 +30,7 @@ export class MessageService {
     user.messagesMonth = (user.messagesMonth || 0) + 1;
     user.messagesTotal = (user.messagesTotal || 0) + 1;
 
-    await user.save();
+    if (!userDoc) await user.save();
     return user;
   }
 

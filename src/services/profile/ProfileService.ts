@@ -33,6 +33,13 @@ export class ProfileService {
     const badges = await AchievementService.getUserBadges(userId, guildId);
     const relationship = await RelationshipService.getRelationship(userId, guildId);
     
+    // Buscar posição no ranking (XP)
+    const totalUsers = await UserModel.countDocuments({ guildId });
+    const rank = await UserModel.countDocuments({ 
+      guildId, 
+      xp: { $gt: user.xp } 
+    }) + 1;
+
     // Formatação de Insígnias com Emojis Customizados
     let badgeString = badges.length > 0 
       ? badges.map((b: any) => b.icon).join(' ') 
@@ -44,15 +51,19 @@ export class ProfileService {
     }
 
     let partnerInfo = 'Solteiro(a) no Garden';
-    if (relationship) {
+    if (relationship && relationship.status === 'active') {
       const partnerId = relationship.user1Id === userId ? relationship.user2Id : relationship.user1Id;
-      partnerInfo = `💞 Com <@${partnerId}> (Afinidade: ${relationship.affinity || 0})`;
+      const typeLabel = relationship.type === 'casados' ? 'Casado(a)' : 
+                        relationship.type === 'noivos' ? 'Noivo(a)' : 'Namorando';
+      partnerInfo = `💞 ${typeLabel} com <@${partnerId}> (Afinidade: ${relationship.affinity || 0})`;
     }
 
     return {
       user,
       badgeString,
-      partnerInfo
+      partnerInfo,
+      rank,
+      totalUsers
     };
   }
 }

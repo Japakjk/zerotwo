@@ -27,8 +27,7 @@ export default {
     }
 
     try {
-      await member.timeout(durationMs, reason);
-      const modCase = await ModerationService.createCase(interaction.guild!, target.id, interaction.user.id, 'mute', reason, durationStr);
+      const modCase = await ModerationService.timeout(member, interaction.user.id, durationMs, reason);
 
       const embed = ZeroTwoEmbed.success('Membro Silenciado', `**${target.tag}** foi colocado de castigo.`)
         .addFields(
@@ -40,12 +39,15 @@ export default {
 
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      await interaction.editReply({ content: 'Não consegui silenciar este Darling. Verifique minhas permissões!' });
+      console.error('[mute] falha ao aplicar timeout', { guildId: interaction.guildId, userId: target.id, moderatorId: interaction.user.id, durationMs, error });
+      await interaction.editReply({ embeds: [ZeroTwoEmbed.error('Silenciamento não concluído', 'O Discord recusou o timeout. Verifique `ModerateMembers`, minha hierarquia e se a duração é válida.') ] });
     }
   },
 
   async executeText(message: Message, args: string[]) {
-    if (!message.member?.permissions.has(PermissionFlagsBits.ModerateMembers)) return;
+    if (!message.member?.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+      return message.reply({ embeds: [ZeroTwoEmbed.permissionError('ModerateMembers')] });
+    }
 
     const target = message.mentions.users.first() || (args[0] ? await message.client.users.fetch(args[0]).catch(() => null) : null);
     const durationStr = args[1];
@@ -59,14 +61,16 @@ export default {
     if (!member) return message.reply({ content: 'Membro não encontrado.' });
 
     const durationMs = ms(durationStr);
-    if (!durationMs) return message.reply({ content: 'Duração inválida!' });
+    if (!durationMs || durationMs > 28 * 24 * 60 * 60 * 1000) {
+      return message.reply({ content: `${Emojis.warning} **Duração inválida.** Informe um período de até 28 dias, como 10m ou 1h.` });
+    }
 
     try {
-      await member.timeout(durationMs, reason);
-      const modCase = await ModerationService.createCase(message.guild!, target.id, message.author.id, 'mute', reason, durationStr);
+      const modCase = await ModerationService.timeout(member, message.author.id, durationMs, reason);
       await message.reply({ content: `${Emojis.check} **${target.tag}** silenciado por **${durationStr}**! (Caso #${modCase.caseId})` });
-    } catch (err) {
-      await message.reply({ content: 'Erro ao silenciar usuário.' });
+    } catch (error) {
+      console.error('[mute] falha ao aplicar timeout por prefixo', { guildId: message.guildId, userId: target.id, moderatorId: message.author.id, durationMs, error });
+      await message.reply({ embeds: [ZeroTwoEmbed.error('Silenciamento não concluído', 'O Discord recusou o timeout. Verifique `ModerateMembers` e a hierarquia de cargos.') ] });
     }
   }
 };

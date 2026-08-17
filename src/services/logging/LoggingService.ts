@@ -1,23 +1,25 @@
-import { TextChannel, EmbedBuilder, Guild } from 'discord.js';
+import { TextChannel, EmbedBuilder, Guild, Message } from 'discord.js';
 import { GuildModel } from '../../database/models/Guild.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { Emojis } from '../../utils/emojis.js';
+import { logger } from '../../utils/logger.js';
 
 export class LoggingService {
-  static async sendLog(guild: Guild, type: 'moderation' | 'messages' | 'members' | 'voice', embed: EmbedBuilder) {
-    const guildData = await GuildModel.findOne({ guildId: guild.id });
-    if (!guildData || !guildData.logChannels) return;
+  static async sendLog(guild: Guild, type: string, embed: EmbedBuilder) {
+    try {
+      const guildData = await GuildModel.findOne({ guildId: guild.id });
+      if (!guildData || !guildData.logsEnabled || !guildData.logChannels) return;
 
-    const channelId = guildData.logChannels[type];
-    if (!channelId) return;
+      const channels = guildData.logChannels as any;
+      const channelId = channels[type] || channels.messages || channels.moderation;
+      if (!channelId) return;
 
-    const channel = guild.channels.cache.get(channelId) as TextChannel;
-    if (channel) {
-      try {
-        await channel.send({ embeds: [embed] });
-      } catch (err) {
-        console.error(`[LoggingService] Erro ao enviar log para ${channelId}:`, err);
+      const channel = guild.channels.cache.get(channelId) as TextChannel || await guild.channels.fetch(channelId).catch(() => null) as TextChannel;
+      if (channel && channel.isTextBased()) {
+        await channel.send({ embeds: [embed] }).catch(() => {});
       }
+    } catch (err) {
+      logger.error(`[LoggingService] Erro ao enviar log (${type}):`, err);
     }
   }
 
@@ -35,10 +37,10 @@ export class LoggingService {
       embed.addFields({ name: '⏳ Duração', value: caseData.duration, inline: true });
     }
 
-    await this.sendLog(guild, 'moderation', embed);
+    await this.sendLog(guild, 'bans', embed);
   }
 
-  static async logMessageDelete(message: any) {
+  static async logMessageDelete(message: Message) {
     if (!message.guild || message.author?.bot) return;
     const embed = new ZeroTwoEmbed()
       .setTitle('🗑️ Mensagem Apagada')
@@ -55,7 +57,7 @@ export class LoggingService {
       .setTitle('📥 Novo Darling no Garden')
       .setDescription(`Seja bem-vindo(a), **${member.user.username}**! Agora somos **${member.guild.memberCount}** pistoqueiros.`)
       .setThumbnail(member.user.displayAvatarURL());
-    await this.sendLog(member.guild, 'members', embed);
+    await this.sendLog(member.guild, 'join', embed);
   }
 
   static async logMemberLeave(member: any) {
@@ -63,7 +65,7 @@ export class LoggingService {
       .setTitle('📤 Um Darling deixou o Garden')
       .setDescription(`**${member.user.username}** saiu do servidor. Agora somos **${member.guild.memberCount}** pistoqueiros.`)
       .setThumbnail(member.user.displayAvatarURL());
-    await this.sendLog(member.guild, 'members', embed);
+    await this.sendLog(member.guild, 'leave', embed);
   }
 
   static async logMessageUpdate(oldMessage: any, newMessage: any) {

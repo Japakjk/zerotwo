@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 
 export default {
@@ -14,5 +14,15 @@ export default {
       .setTitle(`🖼️ Banner de ${user.username}`)
       .setImage(user.bannerURL({ size: 1024 })!);
     await interaction.editReply({ embeds: [embed] });
+  },
+
+  async executeText(message: Message) {
+    const user = await (message.mentions.users.first() || message.author).fetch();
+    if (!user.bannerURL()) return message.reply({ content: 'Este Darling não possui um banner.' });
+
+    const embed = new ZeroTwoEmbed()
+      .setTitle(`🖼️ Banner de ${user.username}`)
+      .setImage(user.bannerURL({ size: 1024 })!);
+    await message.reply({ embeds: [embed] });
   },
 };

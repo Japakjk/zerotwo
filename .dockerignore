@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+logs
+*.log
+.git
+.gitignore
+*.zip
+AUDITORIA_UX_E2E.md
+RELATORIO_MELHORIAS_SOCIAIS.md
+audit-evidence.txt
+generate_audit_report.py
+social_affinity_smoke.mjs

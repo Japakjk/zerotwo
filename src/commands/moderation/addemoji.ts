@@ -33,15 +33,18 @@ export default {
         .setDescription(`${Emojis.seta} O emoji ${emoji} (**:${emoji.name}:**) foi adicionado com sucesso ao Garden, **Darling**!`);
 
       await interaction.editReply({ embeds: [embed] });
-    } catch (error: any) {
+    } catch (error) {
+      console.error('[addemoji] falha ao adicionar emoji', { guildId: interaction.guildId, attachmentUrl: attachment.url, name, error });
       await interaction.editReply({
-        embeds: [ZeroTwoEmbed.error('Erro ao Adicionar Emoji', `Não consegui adicionar o emoji, **Darling**. Certifique-se de que o arquivo é válido e o servidor tem vagas.\nErro: \`${error.message}\``)]
+        embeds: [ZeroTwoEmbed.error('Emoji não adicionado', 'O Discord recusou o arquivo. Confirme se é PNG, JPEG ou GIF, se o nome é válido e se o servidor ainda tem vagas.')]
       });
     }
   },
 
   async executeText(message: Message, args: string[]) {
-    if (!message.member?.permissions.has(PermissionFlagsBits.ManageEmojisAndStickers)) return;
+    if (!message.member?.permissions.has(PermissionFlagsBits.ManageEmojisAndStickers)) {
+      return message.reply({ embeds: [ZeroTwoEmbed.permissionError('ManageEmojisAndStickers')] });
+    }
 
     const attachment = message.attachments.first();
     const name = args[0];
@@ -61,9 +64,10 @@ export default {
         .setDescription(`${Emojis.seta} O emoji ${emoji} (**:${emoji.name}:**) foi adicionado com sucesso ao Garden, **Darling**!`);
 
       await message.reply({ embeds: [embed] });
-    } catch (error: any) {
+    } catch (error) {
+      console.error('[addemoji] falha ao adicionar emoji por prefixo', { guildId: message.guildId, attachmentUrl: attachment.url, name, error });
       await message.reply({
-        embeds: [ZeroTwoEmbed.error('Erro ao Adicionar Emoji', `Não consegui adicionar o emoji, **Darling**.\nErro: \`${error.message}\``)]
+        embeds: [ZeroTwoEmbed.error('Emoji não adicionado', 'O Discord recusou o arquivo. Confirme o formato, o nome do emoji e as vagas disponíveis no servidor.')]
       });
     }
   }

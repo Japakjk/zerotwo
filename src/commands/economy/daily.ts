@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { EconomyService } from '../../services/economy/EconomyService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { Emojis } from '../../utils/emojis.js';
@@ -24,5 +24,21 @@ export default {
       .addFields({ name: '🔥 Streak', value: 'Você está em uma sequência!', inline: true });
 
     await interaction.editReply({ embeds: [embed] });
+  },
+
+  async executeText(message: Message) {
+    const result = await EconomyService.claimDaily(message.author.id, message.guildId!);
+
+    if (!result.success) {
+      const remaining = result.nextAvailable! - Date.now();
+      return message.reply({ embeds: [ZeroTwoEmbed.warning('Calma, Darling!', `Você já resgatou seu prêmio hoje. Volte em **${ms(remaining, { long: true })}**!`)] });
+    }
+
+    const embed = new ZeroTwoEmbed()
+      .setTitle(`${Emojis.cat_economia} Recompensa do Dia!`)
+      .setDescription(`${Emojis.seta} Você recebeu **${result.amount?.toLocaleString()} ${Emojis.coin}**!\n\n${Emojis.seta_menor} A Zero Two está orgulhosa da sua dedicação.`)
+      .addFields({ name: '🔥 Streak', value: 'Você está em uma sequência!', inline: true });
+
+    await message.reply({ embeds: [embed] });
   },
 };

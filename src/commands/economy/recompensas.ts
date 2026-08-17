@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { MessageService, MESSAGE_REWARDS } from '../../services/economy/MessageService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { Emojis } from '../../utils/emojis.js';
@@ -8,11 +8,20 @@ export default {
     .setName('recompensas')
     .setDescription('Exibe as recompensas por mensagens e metas no Garden.'),
   async execute(interaction: ChatInputCommandInteraction) {
-    const stats = await MessageService.getStats(interaction.user.id, interaction.guildId!);
+    const embed = await this.buildEmbed(interaction.user.id, interaction.user.username, interaction.guildId!);
+    await interaction.editReply({ embeds: [embed] });
+  },
 
+  async executeText(message: Message) {
+    const embed = await this.buildEmbed(message.author.id, message.author.username, message.guild!.id);
+    await message.reply({ embeds: [embed] });
+  },
+
+  async buildEmbed(userId: string, username: string, guildId: string) {
+    const stats = await MessageService.getStats(userId, guildId);
     const embed = new ZeroTwoEmbed()
-      .setTitle(`🎁 Recompensas por Mensagens`)
-      .setDescription(`• ${interaction.user.username} tem **${stats.messagesTotal || 0}** mensagens enviadas elegíveis.\n\n` +
+      .setTitle(`${Emojis.achievement} Recompensas por Mensagens`)
+      .setDescription(`• ${username} tem **${stats.messagesTotal || 0}** mensagens enviadas elegíveis.\n\n` +
         `• ${Emojis.star} Continue conversando para desbloquear coins e VIPs!`);
 
     MESSAGE_REWARDS.forEach(r => {
@@ -28,7 +37,6 @@ export default {
         inline: false
       });
     });
-
-    await interaction.editReply({ embeds: [embed] });
+    return embed;
   },
 };

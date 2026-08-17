@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'disco
 import { SocialService } from '../../services/social/SocialService.js';
 import { CooldownService } from '../../services/economy/CooldownService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
+import { Emojis } from '../../utils/emojis.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -11,48 +12,44 @@ export default {
 
   async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser('usuario', true);
-    if (target.id === interaction.user.id) return interaction.editReply({ content: 'Você não pode se beijar sozinho, Darling! 🦖🌸' });
-
-    const cooldown = await CooldownService.checkCooldown(interaction.user.id, interaction.guildId!, 'beijar');
-    if (cooldown.inCooldown) {
-      return interaction.editReply({ 
-        embeds: [ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para beijar alguém novamente!`)] 
-      });
-    }
-
-    const embed = await SocialService.executeInteraction(
-      'beijar', 
-      interaction.user.id, 
-      target.id, 
-      interaction.user.username, 
-      target.username, 
-      interaction.guildId!
-    );
-    
-    await interaction.editReply({ content: `<@${target.id}>`, embeds: [embed] });
+    await this.handleInteraction(interaction, interaction.user, target, interaction.guildId!);
   },
 
   async executeText(message: Message, args: string[]) {
     const target = message.mentions.users.first() || (args[0] ? await message.client.users.fetch(args[0]).catch(() => null) : null);
-    if (!target) return message.reply({ content: 'Você precisa mencionar um Darling para beijar!' });
-    if (target.id === message.author.id) return message.reply({ content: 'Você não pode se beijar sozinho, Darling! 🦖🌸' });
+    if (!target) return message.reply({ content: `${Emojis.warning} Você precisa mencionar um Darling para beijar!` });
+    await this.handleInteraction(message, message.author, target, message.guildId!);
+  },
 
-    const cooldown = await CooldownService.checkCooldown(message.author.id, message.guildId!, 'beijar');
-    if (cooldown.inCooldown) {
-      return message.reply({ 
-        embeds: [ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para beijar alguém novamente!`)] 
-      });
+  async handleInteraction(context: ChatInputCommandInteraction | Message, author: any, target: any, guildId: string) {
+    const isInteraction = context instanceof ChatInputCommandInteraction;
+
+    if (target.id === author.id) {
+      const msg = `${Emojis.warning} Você não pode se beijar sozinho, Darling! 🦖🌸`;
+      return isInteraction ? context.editReply({ content: msg }) : context.reply({ content: msg });
     }
+
+    // Verificar Cooldown individual para 'beijar'
+    const cooldown = await CooldownService.checkCooldown(author.id, guildId, 'beijar');
+    if (cooldown.inCooldown) {
+      const embed = ZeroTwoEmbed.error('Calma, Darling!', `Você precisa esperar **${cooldown.remainingFormatted}** para beijar alguém novamente!`);
+      return isInteraction ? context.editReply({ embeds: [embed] }) : context.reply({ embeds: [embed] });
+    }
+
+    // Sucesso! Agora definimos o cooldown apenas para este comando
+    await CooldownService.setCooldown(author.id, guildId, 'beijar');
 
     const embed = await SocialService.executeInteraction(
       'beijar', 
-      message.author.id, 
+      author.id, 
       target.id, 
-      message.author.username, 
+      author.username, 
       target.username, 
-      message.guildId!
+      guildId
     );
     
-    await message.reply({ content: `<@${target.id}>`, embeds: [embed] });
+    return isInteraction 
+      ? context.editReply({ content: `<@${target.id}>`, embeds: [embed] })
+      : context.reply({ content: `<@${target.id}>`, embeds: [embed] });
   }
 };

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { AchievementModel } from '../../database/models/Achievement.js';
 import { ACHIEVEMENTS } from '../../services/leveling/AchievementService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
@@ -9,11 +9,20 @@ export default {
     .setName('conquistas')
     .setDescription('Veja suas conquistas e desafios no Garden.'),
   async execute(interaction: ChatInputCommandInteraction) {
-    const userAchievements = await AchievementModel.find({ 
-      userId: interaction.user.id, 
-      guildId: interaction.guildId! 
+    const embed = await this.buildEmbed(interaction.user.id, interaction.guildId!);
+    await interaction.editReply({ embeds: [embed] });
+  },
+
+  async executeText(message: Message) {
+    const embed = await this.buildEmbed(message.author.id, message.guild!.id);
+    await message.reply({ embeds: [embed] });
+  },
+
+  async buildEmbed(userId: string, guildId: string) {
+    const userAchievements = await AchievementModel.find({
+      userId,
+      guildId
     });
-    
     const earnedIds = userAchievements.map((a: any) => a.achievementId);
 
     const embed = new ZeroTwoEmbed()
@@ -26,7 +35,6 @@ export default {
     }).join('\n\n');
 
     embed.addFields({ name: `${Emojis.achievement} Lista de Desafios`, value: list });
-
-    await interaction.editReply({ embeds: [embed] });
+    return embed;
   },
 };

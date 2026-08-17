@@ -29,6 +29,7 @@ export default {
       interaction.guildId!
     );
     
+    await CooldownService.setCooldown(interaction.user.id, interaction.guildId!, 'abracar');
     await interaction.editReply({ content: `<@${target.id}>`, embeds: [embed] });
   },
 
@@ -53,6 +54,7 @@ export default {
       message.guildId!
     );
     
+    await CooldownService.setCooldown(message.author.id, message.guildId!, 'abracar');
     await message.reply({ content: `<@${target.id}>`, embeds: [embed] });
   }
 };

@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Bot Discord profissional inspirado na Zero Two (Darling in the Franxx)",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
-    "deploy": "ts-node scripts/deploy-commands.ts"
+    "deploy": "node dist/scripts/deploy-commands.js"
   },
   "keywords": [
     "discord",

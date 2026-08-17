@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, Message } from 'discord.js';
 import { GuildModel } from '../../database/models/Guild.js';
 import { Emojis } from '../../utils/emojis.js';
+import { config } from '../../config/config.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -33,17 +34,17 @@ export default {
   async handlePrefix(context: ChatInputCommandInteraction | Message, newPrefix: string | undefined, guildId: string, isInteraction: boolean) {
     let guildData = await GuildModel.findOne({ guildId });
     if (!guildData) {
-      guildData = new GuildModel({ guildId, prefix: 'zero!' });
+      guildData = new GuildModel({ guildId, prefix: config.DEFAULT_PREFIX });
     }
 
     if (!newPrefix) {
       const embed = new EmbedBuilder()
         .setColor(0xff3b69)
         .setTitle(`✨ **Prefixo do Servidor**`)
-        .setDescription(`O prefixo atual da **Zero Two** neste servidor é: \`${guildData.prefix}\`\nVocê também pode usar comandos por barra \`/\` ou \`zero!\`.`);
+        .setDescription(`O prefixo atual da **Zero Two** neste servidor é: \`${guildData.prefix}\`\nVocê também pode usar comandos por barra \`/\` ou \`${config.DEFAULT_PREFIX}\`.`);
 
       if (isInteraction) {
-        await (context as ChatInputCommandInteraction).reply({ embeds: [embed], ephemeral: true });
+        await (context as ChatInputCommandInteraction).editReply({ embeds: [embed] });
       } else {
         await (context as Message).reply({ embeds: [embed] });
       }
@@ -59,7 +60,7 @@ export default {
       .setDescription(`O prefixo do servidor foi alterado com sucesso para: \`${newPrefix}\`\n\n*A Zero Two está pronta para receber suas ordens, Darling!*`);
 
     if (isInteraction) {
-      await (context as ChatInputCommandInteraction).reply({ embeds: [embed] });
+      await (context as ChatInputCommandInteraction).editReply({ embeds: [embed] });
     } else {
       await (context as Message).reply({ embeds: [embed] });
     }

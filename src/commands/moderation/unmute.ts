@@ -19,8 +19,7 @@ export default {
     if (!member) return interaction.editReply({ content: 'Membro não encontrado, Darling!' });
 
     try {
-      await member.timeout(null, reason);
-      const modCase = await ModerationService.createCase(interaction.guild!, target.id, interaction.user.id, 'unmute', reason);
+      const modCase = await ModerationService.untimeout(member, interaction.user.id, reason);
 
       const embed = ZeroTwoEmbed.success('Silenciamento Removido', `**${target.tag}** agora pode falar novamente no Garden!`)
         .addFields(
@@ -30,12 +29,15 @@ export default {
 
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      await interaction.editReply({ content: 'Não consegui remover o castigo deste Darling.' });
+      console.error('[unmute] falha ao remover timeout', { guildId: interaction.guildId, userId: target.id, moderatorId: interaction.user.id, error });
+      await interaction.editReply({ embeds: [ZeroTwoEmbed.error('Silenciamento não removido', 'O Discord recusou a alteração. Verifique `ModerateMembers` e a hierarquia de cargos.') ] });
     }
   },
 
   async executeText(message: Message, args: string[]) {
-    if (!message.member?.permissions.has(PermissionFlagsBits.ModerateMembers)) return;
+    if (!message.member?.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+      return message.reply({ embeds: [ZeroTwoEmbed.permissionError('ModerateMembers')] });
+    }
 
     const target = message.mentions.users.first() || (args[0] ? await message.client.users.fetch(args[0]).catch(() => null) : null);
     if (!target) return message.reply({ content: 'Mencione um Darling para desmutar!' });
@@ -44,10 +46,11 @@ export default {
     if (!member) return message.reply({ content: 'Membro não encontrado.' });
 
     try {
-      await member.timeout(null);
-      await message.reply({ content: `${Emojis.check} Silenciamento de **${target.tag}** removido!` });
-    } catch (err) {
-      await message.reply({ content: 'Erro ao remover silenciamento.' });
+      const modCase = await ModerationService.untimeout(member, message.author.id, 'Comando de texto');
+      await message.reply({ content: `${Emojis.check} Silenciamento de **${target.tag}** removido! (Caso #${modCase.caseId})` });
+    } catch (error) {
+      console.error('[unmute] falha ao remover timeout por prefixo', { guildId: message.guildId, userId: target.id, moderatorId: message.author.id, error });
+      await message.reply({ embeds: [ZeroTwoEmbed.error('Silenciamento não removido', 'O Discord recusou a alteração. Verifique `ModerateMembers` e a hierarquia de cargos.') ] });
     }
   }
 };

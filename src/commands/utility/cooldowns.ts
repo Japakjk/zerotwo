@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { CooldownService } from '../../services/economy/CooldownService.js';
 import { Emojis } from '../../utils/emojis.js';
@@ -9,9 +9,14 @@ export default {
     .setName('cooldowns')
     .setDescription('Confira o status dos seus cooldowns no Garden.'),
   async execute(interaction: ChatInputCommandInteraction) {
-    const userId = interaction.user.id;
-    const guildId = interaction.guildId!;
+    await this.sendCooldowns(interaction.user.id, interaction.guildId!, interaction.user.username, (payload: any) => interaction.editReply(payload));
+  },
 
+  async executeText(message: Message) {
+    await this.sendCooldowns(message.author.id, message.guild!.id, message.author.username, (payload: any) => message.reply(payload));
+  },
+
+  async sendCooldowns(userId: string, guildId: string, username: string, send: (payload: any) => Promise<unknown>) {
     const commandsToCheck = ['daily', 'semanal', 'mensal', 'work', 'beijar', 'abracar', 'cafune', 'socar', 'tapa', 'rep'];
     const results: Record<string, string> = {};
 
@@ -25,7 +30,7 @@ export default {
     }
 
     const embed = new ZeroTwoEmbed()
-      .setTitle(`${Emojis.clock} Cooldown's de ${interaction.user.username}`)
+      .setTitle(`${Emojis.clock} Cooldown's de ${username}`)
       .setDescription(`${Emojis.seta} Confira os **cooldown's** abaixo, **Darling**:`)
       .addFields(
         { name: `${Emojis.clock} Diário`, value: `${results.daily}`, inline: true },
@@ -41,6 +46,6 @@ export default {
       )
       .setFooter({ text: `O tempo passa devagar, não é?` });
 
-    await interaction.editReply({ embeds: [embed] });
+    await send({ embeds: [embed] });
   },
 };

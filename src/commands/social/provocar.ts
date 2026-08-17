@@ -21,7 +21,7 @@ export default {
     }
 
     const embed = await SocialService.executeInteraction(
-      'abracar', 
+      'provocar',
       interaction.user.id, 
       target.id, 
       interaction.user.username, 
@@ -45,7 +45,7 @@ export default {
     }
 
     const embed = await SocialService.executeInteraction(
-      'abracar', 
+      'provocar',
       message.author.id, 
       target.id, 
       message.author.username, 

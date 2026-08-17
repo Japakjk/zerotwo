@@ -16,9 +16,13 @@ export function createMockModel(modelName: string, schema: mongoose.Schema) {
     
     const getQueryKey = (query: any) => {
         if (!query) return 'global';
+        if (query.guildId && query.user1Id && query.user2Id) {
+            return `pair-${query.guildId}-${query.user1Id}-${query.user2Id}`;
+        }
+        if (query.guildId && query.userId) return `user-${query.guildId}-${query.userId}`;
+        if (query._id) return `id-${query._id}`;
         if (query.userId) return `user-${query.userId}`;
         if (query.guildId) return `guild-${query.guildId}`;
-        if (query._id) return `id-${query._id}`;
         return `query-${JSON.stringify(query)}`;
     };
 

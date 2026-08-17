@@ -20,8 +20,7 @@ export default {
     if (!member.kickable) return interaction.editReply({ content: 'Eu não tenho poder suficiente para expulsar esse Darling!' });
 
     try {
-      await member.kick(reason);
-      const modCase = await ModerationService.createCase(interaction.guild!, target.id, interaction.user.id, 'kick', reason);
+      const modCase = await ModerationService.kick(member, interaction.user.id, reason);
 
       const embed = ZeroTwoEmbed.success('Membro Expulso', `O usuário **${target.tag}** foi expulso do Garden.`)
         .addFields(
@@ -32,12 +31,15 @@ export default {
 
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      await interaction.editReply({ content: 'Houve um erro ao tentar expulsar este usuário.' });
+      console.error('[kick] falha ao expulsar membro', { guildId: interaction.guildId, userId: target.id, moderatorId: interaction.user.id, error });
+      await interaction.editReply({ embeds: [ZeroTwoEmbed.error('Expulsão não concluída', 'O Discord recusou a expulsão. Verifique minha permissão `KickMembers` e a hierarquia de cargos.') ] });
     }
   },
 
   async executeText(message: Message, args: string[]) {
-    if (!message.member?.permissions.has(PermissionFlagsBits.KickMembers)) return;
+    if (!message.member?.permissions.has(PermissionFlagsBits.KickMembers)) {
+      return message.reply({ embeds: [ZeroTwoEmbed.permissionError('KickMembers')] });
+    }
 
     const target = message.mentions.users.first() || (args[0] ? await message.client.users.fetch(args[0]).catch(() => null) : null);
     const reason = args.slice(1).join(' ') || 'Nenhum motivo fornecido.';
@@ -48,11 +50,11 @@ export default {
     if (!member || !member.kickable) return message.reply({ content: 'Não posso expulsar este usuário!' });
 
     try {
-      await member.kick(reason);
-      const modCase = await ModerationService.createCase(message.guild!, target.id, message.author.id, 'kick', reason);
+      const modCase = await ModerationService.kick(member, message.author.id, reason);
       await message.reply({ content: `${Emojis.check} **${target.tag}** expulso com sucesso! (Caso #${modCase.caseId})` });
-    } catch (err) {
-      await message.reply({ content: 'Erro ao expulsar usuário.' });
+    } catch (error) {
+      console.error('[kick] falha ao expulsar membro por prefixo', { guildId: message.guildId, userId: target.id, moderatorId: message.author.id, error });
+      await message.reply({ embeds: [ZeroTwoEmbed.error('Expulsão não concluída', 'O Discord recusou a expulsão. Verifique `KickMembers` e a hierarquia de cargos.') ] });
     }
   }
 };

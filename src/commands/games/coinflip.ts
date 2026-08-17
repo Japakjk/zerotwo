@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
-import { EconomyService } from '../../services/economy/EconomyService.js';
+import { GameService } from '../../services/games/GameService.js';
 import { ZeroTwoEmbed } from '../../utils/embeds.js';
 import { Emojis } from '../../utils/emojis.js';
 
@@ -15,7 +15,7 @@ export default {
 
   async execute(interaction: ChatInputCommandInteraction) {
     const bet = interaction.options.getInteger('aposta')!;
-    const side = interaction.options.getString('lado')!;
+    const side = interaction.options.getString('lado')! as 'cara' | 'coroa';
     await this.runGame(interaction, bet, side);
   },
 
@@ -30,45 +30,36 @@ export default {
       return message.reply({ content: 'Você precisa escolher entre **cara** ou **coroa**, Darling!' });
     }
 
-    await this.runGame(message, bet, side);
+    await this.runGame(message, bet, side as 'cara' | 'coroa');
   },
 
-  async runGame(context: ChatInputCommandInteraction | Message, bet: number, side: string) {
+  async runGame(context: ChatInputCommandInteraction | Message, bet: number, side: 'cara' | 'coroa') {
     const userId = context instanceof Message ? context.author.id : context.user.id;
     const guildId = context.guildId!;
+    const isInteraction = context instanceof ChatInputCommandInteraction;
 
-    const hasCoins = await EconomyService.removeCoins(userId, guildId, bet);
-    if (!hasCoins) {
+    const gameResult = await GameService.playCoinflip(userId, guildId, bet, side);
+    if (!gameResult) {
       const errorMsg = 'Você não tem D-Coins suficientes para essa aposta, Darling! 🦖💢';
-      return context instanceof Message ? context.reply(errorMsg) : context.editReply(errorMsg);
+      return isInteraction ? context.editReply(errorMsg) : context.reply(errorMsg);
     }
 
-    const result = Math.random() < 0.5 ? 'cara' : 'coroa';
-    const won = side === result;
+    const { result, win, won } = gameResult;
 
     if (won) {
-      const prize = bet * 2;
-      await EconomyService.addCoins(userId, guildId, prize, 'Venceu no Coinflip');
-      
       const embed = new ZeroTwoEmbed()
         .setTitle(`${Emojis.check} Você Ganhou!`)
-        .setDescription(`${Emojis.seta} A moeda caiu em **${result.toUpperCase()}**!\n\nVocê recebeu **${prize.toLocaleString()} D-Coins**. A Zero Two adora vencedores! 🦖🌸`);
+        .setDescription(`${Emojis.seta} A moeda caiu em **${result.toUpperCase()}**!\n\nVocê recebeu **${win.toLocaleString()} D-Coins**. A Zero Two adora vencedores! 🦖🌸`);
       
-      if (context instanceof Message) {
-        await context.reply({ embeds: [embed] });
-      } else {
-        await context.editReply({ embeds: [embed] });
-      }
+      if (isInteraction) await context.editReply({ embeds: [embed] });
+      else await context.reply({ embeds: [embed] });
     } else {
       const embed = new ZeroTwoEmbed()
         .setTitle(`${Emojis.ban} Você Perdeu!`)
         .setDescription(`${Emojis.seta_menor} A moeda caiu em **${result.toUpperCase()}**...\n\nVocê perdeu **${bet.toLocaleString()} D-Coins**. Tente novamente, Darling! ❤️`);
       
-      if (context instanceof Message) {
-        await context.reply({ embeds: [embed] });
-      } else {
-        await context.editReply({ embeds: [embed] });
-      }
+      if (isInteraction) await context.editReply({ embeds: [embed] });
+      else await context.reply({ embeds: [embed] });
     }
   },
 };

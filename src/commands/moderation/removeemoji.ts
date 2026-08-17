@@ -34,15 +34,18 @@ export default {
         .setTitle(`${Emojis.check} Emoji Removido`)
         .setDescription(`${Emojis.seta} O emoji **:${emojiName}:** foi removido com sucesso do Garden.`);
       await interaction.editReply({ embeds: [embed] });
-    } catch (error: any) {
+    } catch (error) {
+      console.error('[removeemoji] falha ao remover emoji', { guildId: interaction.guildId, emojiId: emoji.id, emojiName, error });
       await interaction.editReply({
-        embeds: [ZeroTwoEmbed.error('Erro ao Remover Emoji', `Não consegui remover o emoji, **Darling**.\nErro: \`${error.message}\``)]
+        embeds: [ZeroTwoEmbed.error('Emoji não removido', 'O Discord recusou a remoção. Confirme se eu ainda tenho `ManageEmojisAndStickers` neste servidor.')]
       });
     }
   },
 
   async executeText(message: Message, args: string[]) {
-    if (!message.member?.permissions.has(PermissionFlagsBits.ManageEmojisAndStickers)) return;
+    if (!message.member?.permissions.has(PermissionFlagsBits.ManageEmojisAndStickers)) {
+      return message.reply({ embeds: [ZeroTwoEmbed.permissionError('ManageEmojisAndStickers')] });
+    }
 
     const emojiInput = args[0];
     if (!emojiInput) return message.reply({ content: 'Forneça o emoji ou ID para remover, Darling!' });
@@ -61,8 +64,9 @@ export default {
     try {
       await emoji.delete();
       await message.reply({ content: `Emoji **:${emojiName}:** removido com sucesso!` });
-    } catch (error: any) {
-      await message.reply({ content: `Erro: ${error.message}` });
+    } catch (error) {
+      console.error('[removeemoji] falha ao remover emoji por prefixo', { guildId: message.guildId, emojiId: emoji.id, emojiName, error });
+      await message.reply({ embeds: [ZeroTwoEmbed.error('Emoji não removido', 'O Discord recusou a remoção. Confirme a permissão `ManageEmojisAndStickers`.')] });
     }
   }
 };

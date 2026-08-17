@@ -1,15 +1,9 @@
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { config } from '../config/config.js';
 
 export async function connectDatabase(): Promise<void> {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    logger.warn('⚠️ MONGODB_URI não encontrado. Iniciando bot em modo de demonstração.');
-    return;
-  }
+  const uri = config.MONGODB_URI;
 
   try {
     logger.info('🌸 [DARLING-DB] Tentando conectar ao MongoDB Atlas...');

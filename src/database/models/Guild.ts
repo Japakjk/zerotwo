@@ -1,15 +1,21 @@
 import { Schema } from 'mongoose';
 import { createMockModel } from './MockModel.js';
+import { config } from '../../config/config.js';
 
 export interface IGuild {
   guildId: string;
   prefix: string;
   language: string;
+  logsEnabled: boolean;
   logChannels: {
-    moderation: string;
+    join: string;
+    leave: string;
     messages: string;
-    members: string;
     voice: string;
+    bans: string;
+    rolesAddRemove: string;
+    rolesCreateEdit: string;
+    channelsCreateEdit: string;
   };
   moderation: {
     cases: number;
@@ -18,12 +24,17 @@ export interface IGuild {
   automod: {
     enabled: boolean;
     antiSpam: boolean;
+    antiFlood: boolean;
     antiLinks: boolean;
     antiInvites: boolean;
+    antiMentions: number;
+    maxRepeated: number;
   };
   antiraid: {
     enabled: boolean;
     accountAge: number;
+    massJoinLimit: number;
+    massJoinTime: number;
   };
   welcome: {
     enabled: boolean;
@@ -50,6 +61,8 @@ export interface IGuild {
     enabled: boolean;
     channelId: string;
     message: string;
+    levelRoles: Map<string, string>;
+    xpMultiplier: number;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -57,13 +70,18 @@ export interface IGuild {
 
 const guildSchema = new Schema<IGuild>({
   guildId: { type: String, required: true, unique: true },
-  prefix: { type: String, default: 'zero!' },
+  prefix: { type: String, default: config.DEFAULT_PREFIX },
   language: { type: String, default: 'pt-BR' },
+  logsEnabled: { type: Boolean, default: false },
   logChannels: {
-    moderation: { type: String, default: '' },
+    join: { type: String, default: '' },
+    leave: { type: String, default: '' },
     messages: { type: String, default: '' },
-    members: { type: String, default: '' },
     voice: { type: String, default: '' },
+    bans: { type: String, default: '' },
+    rolesAddRemove: { type: String, default: '' },
+    rolesCreateEdit: { type: String, default: '' },
+    channelsCreateEdit: { type: String, default: '' },
   },
   moderation: {
     cases: { type: Number, default: 0 },
@@ -72,12 +90,17 @@ const guildSchema = new Schema<IGuild>({
   automod: {
     enabled: { type: Boolean, default: false },
     antiSpam: { type: Boolean, default: false },
+    antiFlood: { type: Boolean, default: false },
     antiLinks: { type: Boolean, default: false },
     antiInvites: { type: Boolean, default: false },
+    antiMentions: { type: Number, default: 0 },
+    maxRepeated: { type: Number, default: 0 },
   },
   antiraid: {
     enabled: { type: Boolean, default: false },
     accountAge: { type: Number, default: 0 },
+    massJoinLimit: { type: Number, default: 0 },
+    massJoinTime: { type: Number, default: 10 },
   },
   welcome: {
     enabled: { type: Boolean, default: false },
@@ -104,6 +127,8 @@ const guildSchema = new Schema<IGuild>({
     enabled: { type: Boolean, default: true },
     channelId: { type: String, default: '' },
     message: { type: String, default: 'Parabéns {user}, você subiu para o nível {level}!' },
+    levelRoles: { type: Map, of: String, default: new Map() },
+    xpMultiplier: { type: Number, default: 1.0 },
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
