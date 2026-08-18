@@ -38,7 +38,11 @@ Se o repositório já existir, não execute `git init` nem adicione um segundo r
 
 ## Deploy na Railway
 
-Conecte o repositório ao serviço da Railway. O `Dockerfile` existente compila o TypeScript e inicia `node dist/src/index.js`. A Railway deve usar as variáveis de ambiente configuradas no painel e não um arquivo `.env` commitado.
+**Importante:** o log `Cannot find module '/app/dist/src/index.js'` significa que o processo iniciou sem encontrar o build TypeScript. Nesta atualização, `railway.json` força o builder `DOCKERFILE`, e o `Dockerfile` executa `npm ci` seguido de `npm run build` antes do `npm start`.
+
+Ao usar o ZIP, extraia o conteúdo da pasta interna `zero-two-bot-package/` para a raiz do repositório. A raiz correta precisa conter diretamente `package.json`, `Dockerfile`, `railway.json`, `src/` e `tsconfig.json`; não deixe `zero-two-bot-package/` como o único diretório no nível raiz do GitHub.
+
+Conecte o repositório ao serviço da Railway. O `Dockerfile` compila o TypeScript e inicia `node dist/src/index.js`. Nos logs do novo deploy deve aparecer a detecção do Dockerfile e, antes do start, a etapa de build concluída. A Railway deve usar as variáveis de ambiente configuradas no painel e não um arquivo `.env` commitado.
 
 O comando local de validação antes do push é:
 
@@ -54,4 +58,4 @@ O script `npm run deploy` registra os Slash Commands no escopo definido por `CLI
 
 Após o deploy, confirme no log da Railway: conexão bem-sucedida ao MongoDB Atlas, login do bot Zero Two, sincronização do dashboard e ausência de erros fatais. Depois confirme no Discord `/help`, um comando por prefixo, `/perfil`, `/beijar`, `/ban` e `/namorar`.
 
-Se o token ou a URI do MongoDB já tiverem sido publicados em algum lugar fora da Railway, faça a rotação dessas credenciais no Discord Developer Portal e no MongoDB Atlas antes de usar a instalação em produção.
+Se o token ou a URI do MongoDB já tiverem sido publicados em algum lugar fora da Railway, faça a rotação dessas credenciais no Discord Developer Portal e no MongoDB Atlas antes de usar a instalação em produção. O anexo recebido contém uma falha de inicialização, não uma evidência de falha de autenticação do Discord ou do MongoDB.

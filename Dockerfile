@@ -18,8 +18,8 @@ RUN apk add --no-cache \
     ttf-freefont \
     fontconfig
 
-COPY package.json tsconfig.json ./
-RUN npm install
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci
 
 COPY src ./src
 RUN npm run build
