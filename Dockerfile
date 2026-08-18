@@ -2,7 +2,7 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Instalar dependências de sistema necessárias para compilar o módulo canvas e fontes no Alpine
+# Instalar dependências nativas necessárias para compilar o módulo canvas.
 RUN apk add --no-cache \
     build-base \
     g++ \
@@ -22,7 +22,13 @@ COPY package.json package-lock.json tsconfig.json ./
 RUN npm ci
 
 COPY src ./src
-RUN npm run build
+COPY scripts ./scripts
+
+RUN npm run build \
+    && test -f dist/src/index.js \
+    && test -f dist/scripts/deploy-commands.js \
+    && echo "Build artifacts confirmed:" \
+    && find dist -maxdepth 3 -type f | sort
 
 ENV NODE_ENV=production
 
