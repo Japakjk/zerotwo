@@ -1,6 +1,13 @@
 import { config } from '../../config/config.js';
 
-const DASHBOARD_URL = (process.env.DASHBOARD_API_URL || 'https://zerotwo-dashboard-production.up.railway.app').replace(/\/$/, '');
+function normalizeDashboardUrl(value: string) {
+  const trimmed = value.trim().replace(/\/$/, '');
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+const DASHBOARD_URL = normalizeDashboardUrl(
+  process.env.DASHBOARD_API_URL || 'https://zerotwo-dashboard-production.up.railway.app',
+);
 const BOT_API_KEY = process.env.BOT_API_KEY;
 
 function dashboardConfigured() {
@@ -48,9 +55,9 @@ export class DashboardService {
   }
 
   static async syncGuild(guild: { id: string; name: string; ownerId?: string; iconURL?: () => string | null }) {
-    if (!dashboardConfigured()) return;
+    if (!dashboardConfigured()) return false;
     try {
-      await fetch(`${DASHBOARD_URL}/api/bot/sync-guild`, {
+      const response = await fetch(`${DASHBOARD_URL}/api/bot/sync-guild`, {
         method: 'POST',
         headers: dashboardHeaders(),
         body: JSON.stringify({
@@ -60,8 +67,11 @@ export class DashboardService {
           guildIcon: guild.iconURL?.() || null,
         }),
       });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return true;
     } catch (error: any) {
       console.error(`[DashboardBridge] Falha ao sincronizar guilda ${guild.id}:`, error.message);
+      return false;
     }
   }
 

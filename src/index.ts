@@ -112,7 +112,7 @@ async function loadCommands() {
 }
 
 // Evento Ready
-client.once('ready', async (readyClient) => {
+client.once('clientReady', async (readyClient) => {
   logger.info(`🌸 [DARLING-BOT] Logado com sucesso como ${readyClient.user?.tag}! A ${readyClient.user?.username || 'Loirinha'} está pronta.`);
   
   readyClient.user?.setPresence({
@@ -123,8 +123,12 @@ client.once('ready', async (readyClient) => {
   // Sincronizar guildas com o Dashboard Web
   for (const guild of readyClient.guilds.cache.values()) {
     try {
-      await DashboardService.syncGuild(guild);
-      logger.info(`[DashboardBridge] Guilda sincronizada: ${guild.name} (${guild.id})`);
+      const synced = await DashboardService.syncGuild(guild);
+      if (synced) {
+        logger.info(`[DashboardBridge] Guilda sincronizada: ${guild.name} (${guild.id})`);
+      } else {
+        logger.warn(`[DashboardBridge] Guilda não sincronizada: ${guild.name} (${guild.id})`);
+      }
     } catch (err: any) {
       logger.error(`[DashboardBridge] Falha ao sincronizar ${guild.id}:`, err.message);
     }
@@ -134,8 +138,12 @@ client.once('ready', async (readyClient) => {
 // Evento de Nova Guilda
 client.on('guildCreate', async (guild) => {
   try {
-    await DashboardService.syncGuild(guild);
-    logger.info(`[DashboardBridge] Nova guilda sincronizada: ${guild.name} (${guild.id})`);
+    const synced = await DashboardService.syncGuild(guild);
+    if (synced) {
+      logger.info(`[DashboardBridge] Nova guilda sincronizada: ${guild.name} (${guild.id})`);
+    } else {
+      logger.warn(`[DashboardBridge] Nova guilda não sincronizada: ${guild.name} (${guild.id})`);
+    }
   } catch (err: any) {
     logger.error(`[DashboardBridge] Falha ao sincronizar nova guilda ${guild.id}:`, err.message);
   }
